@@ -315,6 +315,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment settlement routes
+  app.post('/api/securities/:id/mark-paid', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'merchant') {
+        return res.status(403).json({ message: "Only merchants can mark securities as paid" });
+      }
+
+      // Check if security belongs to the merchant and is in a payable status
+      const existingSecurity = await storage.getSecurity(id);
+      if (!existingSecurity || existingSecurity.merchantId !== userId) {
+        return res.status(404).json({ message: "Security not found" });
+      }
+
+      if (existingSecurity.status !== "purchased" && existingSecurity.status !== "payment_due") {
+        return res.status(400).json({ message: "Security cannot be marked as paid in its current status" });
+      }
+
+      // Mark security as paid
+      const paidSecurity = await storage.markSecurityAsPaid(id);
+
+      // Update investor's wallet balance
+      if (existingSecurity.purchasedBy) {
+        await storage.updateUserWalletBalance(
+          existingSecurity.purchasedBy, 
+          parseFloat(existingSecurity.totalValue)
+        );
+      }
+
+      res.json(paidSecurity);
+    } catch (error) {
+      console.error("Error marking security as paid:", error);
+      res.status(500).json({ message: "Failed to mark security as paid" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

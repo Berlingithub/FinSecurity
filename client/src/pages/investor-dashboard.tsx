@@ -152,13 +152,13 @@ export default function InvestorDashboard() {
 
   // Filter marketplace securities
   const filteredMarketplace = marketplaceStatusFilter === "all" 
-    ? marketplacePaged 
-    : marketplacePaged.filter(s => s.status === marketplaceStatusFilter);
+    ? securities 
+    : securities.filter((s: Security) => s.status === marketplaceStatusFilter);
 
   // Filter owned securities
   const filteredOwnedSecurities = ownedStatusFilter === "all" 
-    ? ownedSecurities 
-    : ownedSecurities.filter(s => s.status === ownedStatusFilter);
+    ? purchasedSecurities 
+    : purchasedSecurities.filter((s: Security) => s.status === ownedStatusFilter);
 
   // Filter and sort securities
   const filteredAndSortedSecurities = securities
@@ -226,15 +226,17 @@ export default function InvestorDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Market Value</p>
-                  <p className="text-2xl font-bold text-gray-900">${totalInvestmentValue.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-gray-600">Wallet Balance</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${user?.walletBalance ? parseFloat(user.walletBalance).toLocaleString() : "0.00"}
+                  </p>
                 </div>
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-emerald-600" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-600">{securities.length} securities available</span>
+                <span className="text-emerald-600">Available for investments</span>
               </div>
             </CardContent>
           </Card>
@@ -369,7 +371,7 @@ export default function InvestorDashboard() {
                     <p className="text-sm text-gray-500">Check back later for new investment opportunities</p>
                   </div>
                 ) : (
-                  filteredMarketplace.map((security) => (
+                  filteredMarketplace.map((security: Security) => (
                     <div key={security.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
@@ -483,7 +485,7 @@ export default function InvestorDashboard() {
                         </p>
                       </div>
                     ) : (
-                      filteredOwnedSecurities.map((security) => (
+                      filteredOwnedSecurities.map((security: Security) => (
                         <div key={security.id} className="border border-gray-200 rounded-lg p-4 bg-green-50 border-green-200">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1">

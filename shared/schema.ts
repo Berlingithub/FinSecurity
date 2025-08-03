@@ -34,6 +34,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { enum: ["merchant", "investor"] }).notNull(),
+  walletBalance: decimal("wallet_balance", { precision: 12, scale: 2 }).default("0.00"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -81,6 +82,7 @@ export const securities = pgTable("securities", {
   listedAt: timestamp("listed_at"),
   purchasedBy: varchar("purchased_by").references(() => users.id),
   purchasedAt: timestamp("purchased_at"),
+  paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

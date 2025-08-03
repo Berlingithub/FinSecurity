@@ -11,7 +11,7 @@ import {
   type InsertSecurity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -203,6 +203,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(securities.id, id))
       .returning();
     return security;
+  }
+
+  // Security payment methods
+  async markSecurityAsPaid(securityId: string): Promise<Security> {
+    const [security] = await db
+      .update(securities)
+      .set({ 
+        status: "paid",
+        paidAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(securities.id, securityId))
+      .returning();
+    return security;
+  }
+
+  async updateUserWalletBalance(userId: string, amount: number): Promise<User> {
+    // Get current balance
+    const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
+    const currentBalance = parseFloat(currentUser.walletBalance || "0");
+    const newBalance = currentBalance + amount;
+
+    const [user] = await db
+      .update(users)
+      .set({ 
+        walletBalance: newBalance.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 

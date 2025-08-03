@@ -206,6 +206,40 @@ export default function MerchantDashboard() {
     },
   });
 
+  // Mark as paid mutation
+  const markAsPaidMutation = useMutation({
+    mutationFn: async (securityId: string) => {
+      const response = await apiRequest("POST", `/api/securities/${securityId}/mark-paid`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Payment Processed",
+        description: "Security marked as paid! Funds transferred to investor.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/securities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/receivables"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark security as paid. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: CreateReceivable) => {
     createReceivableMutation.mutate(data);
   };
@@ -783,6 +817,34 @@ export default function MerchantDashboard() {
                                   <div className="flex items-center text-sm text-blue-600">
                                     <Shield className="w-4 h-4 mr-1" />
                                     Sold
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleViewAgreement(security)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <FileText className="w-4 h-4 mr-1" />
+                                    View Agreement
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => markAsPaidMutation.mutate(security.id)}
+                                    disabled={markAsPaidMutation.isPending}
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  >
+                                    <DollarSign className="w-4 h-4 mr-1" />
+                                    {markAsPaidMutation.isPending ? "Processing..." : "Mark as Paid"}
+                                  </Button>
+                                </div>
+                              )}
+                              
+                              {security && security.status === "paid" && (
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex items-center text-sm text-green-600">
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Payment Complete
                                   </div>
                                   <Button
                                     variant="outline"
