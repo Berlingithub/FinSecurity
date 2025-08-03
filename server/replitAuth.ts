@@ -69,10 +69,12 @@ async function upsertUser(
     profileImageUrl: claims["profile_image_url"],
   };
   
-  // If user doesn't exist, we'll let them choose their role during registration
   // If user exists, preserve their existing role
+  // If user doesn't exist, set a default role of 'merchant'
   if (existingUser?.role) {
     userData.role = existingUser.role;
+  } else {
+    userData.role = 'merchant'; // Default role for new users
   }
   
   await storage.upsertUser(userData);
