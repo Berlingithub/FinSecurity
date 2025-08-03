@@ -351,6 +351,17 @@ export default function InvestorDashboard() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Investor Dashboard</h1>
             <p className="text-gray-600 mt-1">Welcome back! Explore new investment opportunities.</p>
+            {/* Test Link for Security Detail Page */}
+            <div className="mt-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setLocation('/security/32dea4b8-a921-42b7-a990-0b84c76635bf')}
+                className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+              >
+                🔍 Test Security Detail Page (Click Here!)
+              </Button>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <NotificationCenter />
@@ -854,7 +865,10 @@ export default function InvestorDashboard() {
                           <div className="grid grid-cols-2 gap-3">
                             <Button
                               variant="outline"
-                              onClick={() => setLocation(`/security/${security.id}`)}
+                              onClick={() => {
+                                console.log("Navigating to:", `/security/${security.id}`);
+                                setLocation(`/security/${security.id}`);
+                              }}
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-300 transition-all duration-200"
                             >
                               <Eye className="w-4 h-4 mr-2" />
