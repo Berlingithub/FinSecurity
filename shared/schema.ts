@@ -60,7 +60,25 @@ export const receivables = pgTable("receivables", {
   currency: varchar("currency", { length: 3 }).notNull().default("USD"),
   dueDate: date("due_date").notNull(),
   description: text("description"),
-  status: varchar("status", { enum: ["active", "paid", "overdue", "securitized"] }).notNull().default("active"),
+  status: varchar("status", { enum: ["draft", "active", "securitized", "listed", "sold", "paid", "overdue"] }).notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Securities table - represents securitized receivables
+export const securities = pgTable("securities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  receivableId: varchar("receivable_id").notNull().references(() => receivables.id),
+  merchantId: varchar("merchant_id").notNull().references(() => users.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  totalValue: decimal("total_value", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  expectedReturn: decimal("expected_return", { precision: 5, scale: 2 }), // percentage
+  riskGrade: varchar("risk_grade", { enum: ["A", "A-", "B+", "B", "B-", "C+", "C", "C-"] }),
+  duration: varchar("duration").notNull(), // e.g., "90 days", "6 months"
+  status: varchar("status", { enum: ["securitized", "listed", "funded", "completed"] }).notNull().default("securitized"),
+  listedAt: timestamp("listed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -68,11 +86,24 @@ export const receivables = pgTable("receivables", {
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   receivables: many(receivables),
+  securities: many(securities),
 }));
 
-export const receivablesRelations = relations(receivables, ({ one }) => ({
+export const receivablesRelations = relations(receivables, ({ one, many }) => ({
   merchant: one(users, {
     fields: [receivables.merchantId],
+    references: [users.id],
+  }),
+  securities: many(securities),
+}));
+
+export const securitiesRelations = relations(securities, ({ one }) => ({
+  receivable: one(receivables, {
+    fields: [securities.receivableId],
+    references: [receivables.id],
+  }),
+  merchant: one(users, {
+    fields: [securities.merchantId],
     references: [users.id],
   }),
 }));
@@ -90,6 +121,18 @@ export const createReceivableSchema = insertReceivableSchema.extend({
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Amount must be a valid number with up to 2 decimal places"),
 });
 
+export const insertSecuritySchema = createInsertSchema(securities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  listedAt: true,
+});
+
+export const createSecuritySchema = insertSecuritySchema.extend({
+  totalValue: z.string().regex(/^\d+(\.\d{1,2})?$/, "Total value must be a valid number with up to 2 decimal places"),
+  expectedReturn: z.string().regex(/^\d+(\.\d{1,2})?$/, "Expected return must be a valid percentage").optional(),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -98,3 +141,6 @@ export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type Receivable = typeof receivables.$inferSelect;
 export type InsertReceivable = z.infer<typeof insertReceivableSchema>;
 export type CreateReceivable = z.infer<typeof createReceivableSchema>;
+export type Security = typeof securities.$inferSelect;
+export type InsertSecurity = z.infer<typeof insertSecuritySchema>;
+export type CreateSecurity = z.infer<typeof createSecuritySchema>;

@@ -1,11 +1,14 @@
 import {
   users,
   receivables,
+  securities,
   type User,
   type UpsertUser,
   type RegisterUser,
   type Receivable,
   type InsertReceivable,
+  type Security,
+  type InsertSecurity,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -25,6 +28,13 @@ export interface IStorage {
   getReceivable(id: string): Promise<Receivable | undefined>;
   updateReceivable(id: string, receivable: Partial<InsertReceivable>): Promise<Receivable>;
   deleteReceivable(id: string): Promise<void>;
+  // Security operations
+  createSecurity(security: InsertSecurity): Promise<Security>;
+  getSecuritiesByMerchant(merchantId: string): Promise<Security[]>;
+  getListedSecurities(): Promise<Security[]>;
+  getSecurity(id: string): Promise<Security | undefined>;
+  updateSecurity(id: string, security: Partial<InsertSecurity>): Promise<Security>;
+  listSecurity(id: string): Promise<Security>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -108,6 +118,64 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(receivables)
       .where(eq(receivables.id, id));
+  }
+
+  // Security operations
+  async createSecurity(securityData: InsertSecurity): Promise<Security> {
+    const [security] = await db
+      .insert(securities)
+      .values(securityData)
+      .returning();
+    return security;
+  }
+
+  async getSecuritiesByMerchant(merchantId: string): Promise<Security[]> {
+    return await db
+      .select()
+      .from(securities)
+      .where(eq(securities.merchantId, merchantId))
+      .orderBy(desc(securities.createdAt));
+  }
+
+  async getListedSecurities(): Promise<Security[]> {
+    return await db
+      .select()
+      .from(securities)
+      .where(eq(securities.status, "listed"))
+      .orderBy(desc(securities.listedAt));
+  }
+
+  async getSecurity(id: string): Promise<Security | undefined> {
+    const [security] = await db
+      .select()
+      .from(securities)
+      .where(eq(securities.id, id));
+    return security;
+  }
+
+  async updateSecurity(id: string, securityData: Partial<InsertSecurity>): Promise<Security> {
+    const [security] = await db
+      .update(securities)
+      .set({
+        ...securityData,
+        updatedAt: new Date(),
+      })
+      .where(eq(securities.id, id))
+      .returning();
+    return security;
+  }
+
+  async listSecurity(id: string): Promise<Security> {
+    const [security] = await db
+      .update(securities)
+      .set({
+        status: "listed",
+        listedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(securities.id, id))
+      .returning();
+    return security;
   }
 }
 

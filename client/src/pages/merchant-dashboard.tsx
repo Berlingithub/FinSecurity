@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit } from "lucide-react";
+import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit, Lock, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -15,7 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { createReceivableSchema, type CreateReceivable, type Receivable } from "@shared/schema";
+import { createReceivableSchema, createSecuritySchema, type CreateReceivable, type CreateSecurity, type Receivable, type Security } from "@shared/schema";
 import { format } from "date-fns";
 import Header from "@/components/Header";
 
@@ -24,6 +24,8 @@ export default function MerchantDashboard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const queryClient = useQueryClient();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSecuritizeModalOpen, setIsSecuritizeModalOpen] = useState(false);
+  const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
 
   const form = useForm<CreateReceivable>({
     resolver: zodResolver(createReceivableSchema),
@@ -36,9 +38,28 @@ export default function MerchantDashboard() {
     },
   });
 
+  const securitizeForm = useForm<CreateSecurity>({
+    resolver: zodResolver(createSecuritySchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      totalValue: "",
+      expectedReturn: "",
+      riskGrade: "B",
+      duration: "",
+    },
+  });
+
   // Fetch receivables
   const { data: receivables = [], isLoading: receivablesLoading } = useQuery<Receivable[]>({
     queryKey: ["/api/receivables"],
+    enabled: !!user && user.role === "merchant",
+    retry: false,
+  });
+
+  // Fetch securities
+  const { data: securities = [], isLoading: securitiesLoading } = useQuery<Security[]>({
+    queryKey: ["/api/securities"],
     enabled: !!user && user.role === "merchant",
     retry: false,
   });
@@ -111,8 +132,84 @@ export default function MerchantDashboard() {
     },
   });
 
+  // Securitize receivable mutation
+  const securitizeMutation = useMutation({
+    mutationFn: async ({ receivableId, data }: { receivableId: string; data: CreateSecurity }) => {
+      const response = await apiRequest("POST", `/api/securities/securitize/${receivableId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Receivable securitized successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/receivables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/securities"] });
+      setIsSecuritizeModalOpen(false);
+      setSelectedReceivable(null);
+      securitizeForm.reset();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to securitize receivable. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // List security mutation
+  const listSecurityMutation = useMutation({
+    mutationFn: async (securityId: string) => {
+      const response = await apiRequest("POST", `/api/securities/${securityId}/list`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Security listed on marketplace successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/receivables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/securities"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to list security. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: CreateReceivable) => {
     createReceivableMutation.mutate(data);
+  };
+
+  const onSecuritizeSubmit = (data: CreateSecurity) => {
+    if (!selectedReceivable) return;
+    securitizeMutation.mutate({ receivableId: selectedReceivable.id, data });
   };
 
   const handleDeleteReceivable = (id: string) => {
@@ -121,12 +218,33 @@ export default function MerchantDashboard() {
     }
   };
 
+  const handleSecuritize = (receivable: Receivable) => {
+    setSelectedReceivable(receivable);
+    // Pre-fill form with receivable data
+    securitizeForm.setValue("title", `${receivable.debtorName} Trade Receivable`);
+    securitizeForm.setValue("totalValue", receivable.amount);
+    securitizeForm.setValue("description", receivable.description || `Trade receivable from ${receivable.debtorName} due ${format(new Date(receivable.dueDate), "MMM dd, yyyy")}`);
+    setIsSecuritizeModalOpen(true);
+  };
+
+  const handleListSecurity = (securityId: string) => {
+    if (confirm("Are you sure you want to list this security on the marketplace? This action cannot be undone.")) {
+      listSecurityMutation.mutate(securityId);
+    }
+  };
+
+  // Find security for receivable
+  const getSecurityForReceivable = (receivableId: string) => {
+    return securities.find(s => s.receivableId === receivableId);
+  };
+
   // Calculate totals
   const totalReceivables = receivables.reduce((sum, r) => sum + parseFloat(r.amount), 0);
-  const activeReceivables = receivables.filter(r => r.status === "active").length;
+  const activeReceivables = receivables.filter(r => r.status === "draft" || r.status === "active").length;
   const securitizedAmount = receivables
-    .filter(r => r.status === "securitized")
+    .filter(r => r.status === "securitized" || r.status === "listed")
     .reduce((sum, r) => sum + parseFloat(r.amount), 0);
+  const listedSecurities = securities.filter(s => s.status === "listed").length;
 
   // Redirect if not authenticated or not a merchant
   useEffect(() => {
@@ -241,15 +359,15 @@ export default function MerchantDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Overdue</p>
-                  <p className="text-2xl font-bold text-gray-900">{receivables.filter(r => r.status === "overdue").length}</p>
+                  <p className="text-sm font-medium text-gray-600">Listed Securities</p>
+                  <p className="text-2xl font-bold text-gray-900">{listedSecurities}</p>
                 </div>
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-red-500" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-indigo-500" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-600">Past due date</span>
+                <span className="text-gray-600">On marketplace</span>
               </div>
             </CardContent>
           </Card>
@@ -352,7 +470,7 @@ export default function MerchantDashboard() {
                             <FormItem>
                               <FormLabel>Description (Optional)</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="Additional notes about this receivable" {...field} />
+                                <Textarea placeholder="Additional notes about this receivable" {...field} value={field.value || ""} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -371,6 +489,136 @@ export default function MerchantDashboard() {
                   </DialogContent>
                 </Dialog>
               </CardHeader>
+              
+              {/* Securitization Modal */}
+              <Dialog open={isSecuritizeModalOpen} onOpenChange={setIsSecuritizeModalOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Securitize Receivable</DialogTitle>
+                    <DialogDescription>
+                      Convert your receivable into a tradeable security for the marketplace.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...securitizeForm}>
+                    <form onSubmit={securitizeForm.handleSubmit(onSecuritizeSubmit)} className="space-y-4">
+                      <FormField
+                        control={securitizeForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Security Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Descriptive title for investors" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={securitizeForm.control}
+                          name="totalValue"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Total Value</FormLabel>
+                              <FormControl>
+                                <Input placeholder="0.00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={securitizeForm.control}
+                          name="expectedReturn"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Expected Return (%)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="5.5" {...field} value={field.value || ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={securitizeForm.control}
+                          name="riskGrade"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Risk Grade</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select risk grade" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="A">A - Low Risk</SelectItem>
+                                  <SelectItem value="A-">A- - Low Risk</SelectItem>
+                                  <SelectItem value="B+">B+ - Medium Risk</SelectItem>
+                                  <SelectItem value="B">B - Medium Risk</SelectItem>
+                                  <SelectItem value="B-">B- - Medium Risk</SelectItem>
+                                  <SelectItem value="C+">C+ - High Risk</SelectItem>
+                                  <SelectItem value="C">C - High Risk</SelectItem>
+                                  <SelectItem value="C-">C- - High Risk</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={securitizeForm.control}
+                          name="duration"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Duration</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., 90 days, 6 months" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={securitizeForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Investment Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Detailed description for potential investors" 
+                                {...field} 
+                                value={field.value || ""} 
+                                rows={3}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-primary-500 hover:bg-primary-600"
+                        disabled={securitizeMutation.isPending}
+                      >
+                        {securitizeMutation.isPending ? "Securitizing..." : "Securitize Receivable"}
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
               <CardContent>
                 {receivablesLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -384,38 +632,88 @@ export default function MerchantDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {receivables.map((receivable) => (
-                      <div key={receivable.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Receipt className="w-5 h-5 text-primary-500" />
+                    {receivables.map((receivable) => {
+                      const security = getSecurityForReceivable(receivable.id);
+                      const canSecuritize = receivable.status === "draft" || receivable.status === "active";
+                      const isSecuritized = receivable.status === "securitized";
+                      const isListed = receivable.status === "listed";
+                      
+                      return (
+                        <div key={receivable.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Receipt className="w-5 h-5 text-primary-500" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{receivable.debtorName}</p>
+                                <p className="text-sm text-gray-600">{receivable.currency} {parseFloat(receivable.amount).toLocaleString()}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{receivable.debtorName}</p>
-                              <p className="text-sm text-gray-600">{receivable.currency} {parseFloat(receivable.amount).toLocaleString()}</p>
+                            <div className="flex items-center space-x-2">
+                              <Badge 
+                                variant={
+                                  receivable.status === "active" || receivable.status === "draft" ? "default" : 
+                                  receivable.status === "overdue" ? "destructive" : 
+                                  receivable.status === "securitized" ? "secondary" :
+                                  receivable.status === "listed" ? "outline" : "secondary"
+                                }
+                              >
+                                {receivable.status}
+                              </Badge>
+                              <p className="text-sm text-gray-600">Due: {format(new Date(receivable.dueDate), "MMM dd, yyyy")}</p>
+                              
+                              {/* Action buttons based on status */}
+                              {canSecuritize && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSecuritize(receivable)}
+                                  className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                                >
+                                  <Lock className="w-4 h-4 mr-1" />
+                                  Securitize
+                                </Button>
+                              )}
+                              
+                              {isSecuritized && security && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleListSecurity(security.id)}
+                                  disabled={listSecurityMutation.isPending}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                >
+                                  <TrendingUp className="w-4 h-4 mr-1" />
+                                  List for Sale
+                                </Button>
+                              )}
+                              
+                              {isListed && (
+                                <div className="flex items-center text-sm text-green-600">
+                                  <TrendingUp className="w-4 h-4 mr-1" />
+                                  On Marketplace
+                                </div>
+                              )}
+                              
+                              {(canSecuritize) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteReceivable(receivable.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={receivable.status === "active" ? "default" : receivable.status === "overdue" ? "destructive" : "secondary"}>
-                              {receivable.status}
-                            </Badge>
-                            <p className="text-sm text-gray-600">Due: {format(new Date(receivable.dueDate), "MMM dd, yyyy")}</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteReceivable(receivable.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          {receivable.description && (
+                            <p className="mt-2 text-sm text-gray-600 ml-13">{receivable.description}</p>
+                          )}
                         </div>
-                        {receivable.description && (
-                          <p className="mt-2 text-sm text-gray-600 ml-13">{receivable.description}</p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
