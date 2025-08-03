@@ -28,9 +28,9 @@ export default function InvestorDashboard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [currencyFilter, setCurrencyFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [riskFilter, setRiskFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
@@ -291,37 +291,38 @@ export default function InvestorDashboard() {
     ? purchasedSecurities 
     : purchasedSecurities.filter((s: Security) => s.status === ownedStatusFilter);
 
-  // Filter and sort securities with advanced filtering
-  const filteredAndSortedSecurities = securities
-    .filter(security => {
-      // Search filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch = 
-          security.title?.toLowerCase().includes(query) ||
-          security.description?.toLowerCase().includes(query) ||
-          (security as any).debtorName?.toLowerCase().includes(query) ||
-          (security as any).merchantName?.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-      }
+  // Filter and sort securities with advanced multi-select filtering
+  const filteredAndSortedSecurities = useMemo(() => {
+    return securities
+      .filter(security => {
+        // Search filter
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          const matchesSearch = 
+            security.title?.toLowerCase().includes(query) ||
+            security.description?.toLowerCase().includes(query) ||
+            (security as any).debtorName?.toLowerCase().includes(query) ||
+            (security as any).merchantName?.toLowerCase().includes(query);
+          if (!matchesSearch) return false;
+        }
 
-      // Category filter
-      if (categoryFilter !== 'all' && (security as any).category !== categoryFilter) {
-        return false;
-      }
+        // Multi-select category filter
+        if (categoryFilter.length > 0 && !categoryFilter.includes((security as any).category)) {
+          return false;
+        }
 
-      // Risk level filter
-      if (riskFilter !== 'all' && (security as any).riskLevel !== riskFilter) {
-        return false;
-      }
+        // Multi-select risk level filter
+        if (riskFilter.length > 0 && !riskFilter.includes((security as any).riskLevel)) {
+          return false;
+        }
 
-      // Currency filter
-      if (currencyFilter !== 'all' && security.currency !== currencyFilter) {
-        return false;
-      }
+        // Multi-select currency filter
+        if (currencyFilter.length > 0 && !currencyFilter.includes(security.currency)) {
+          return false;
+        }
 
-      return true;
-    })
+        return true;
+      })
     .sort((a, b) => {
       switch (sortOption) {
         case 'amount-asc':
@@ -347,11 +348,46 @@ export default function InvestorDashboard() {
           return 0;
       }
     });
+  }, [securities, searchQuery, categoryFilter, riskFilter, currencyFilter, sortOption]);
 
-  // Get unique values for filters
+  // Get unique values for filters with dynamic counts
   const availableCurrencies = Array.from(new Set(securities.map(s => s.currency)));
   const availableCategories = Array.from(new Set(securities.map((s: any) => s.category).filter(Boolean)));
   const availableRiskLevels = Array.from(new Set(securities.map((s: any) => s.riskLevel).filter(Boolean)));
+
+  // Calculate dynamic filter counts based on current filters
+  const getFilteredCount = (filterType: 'category' | 'risk' | 'currency', filterValue: string) => {
+    return securities.filter((security: any) => {
+      // Apply all other filters except the one we're counting
+      const matchesSearch = !searchQuery || 
+        security.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        security.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        security.debtorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        security.merchantName?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      let matchesCategory = true;
+      let matchesRisk = true;
+      let matchesCurrency = true;
+      
+      if (filterType !== 'category') {
+        matchesCategory = categoryFilter.length === 0 || categoryFilter.includes(security.category);
+      }
+      if (filterType !== 'risk') {
+        matchesRisk = riskFilter.length === 0 || riskFilter.includes(security.riskLevel);
+      }
+      if (filterType !== 'currency') {
+        matchesCurrency = currencyFilter.length === 0 || currencyFilter.includes(security.currency);
+      }
+      
+      // Apply the specific filter we're counting
+      let matchesSpecific = false;
+      if (filterType === 'category') matchesSpecific = security.category === filterValue;
+      if (filterType === 'risk') matchesSpecific = security.riskLevel === filterValue;
+      if (filterType === 'currency') matchesSpecific = security.currency === filterValue;
+      
+      return matchesSearch && matchesCategory && matchesRisk && matchesCurrency && matchesSpecific;
+    }).length;
+  };
 
   // Calculate portfolio stats
   const totalInvestmentValue = securities.reduce((sum, s) => sum + parseFloat(s.totalValue), 0);
@@ -413,11 +449,11 @@ export default function InvestorDashboard() {
             {/* Browse All Securities */}
             <button
               onClick={() => {
-                setCategoryFilter('all');
-                setRiskFilter('all');
+                setCategoryFilter([]);
+                setRiskFilter([]);
               }}
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                categoryFilter === 'all' && riskFilter === 'all'
+                categoryFilter.length === 0 && riskFilter.length === 0
                   ? 'bg-blue-50 text-blue-700 border border-blue-200'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
@@ -444,13 +480,19 @@ export default function InvestorDashboard() {
                   { value: 'Construction', icon: Hammer, label: 'Construction' },
                   { value: 'Agriculture', icon: Wheat, label: 'Agriculture' },
                 ].map(({ value, icon: Icon, label }) => {
-                  const isActive = categoryFilter === value;
-                  const categoryCount = securities.filter(s => s.category === value).length;
+                  const isActive = categoryFilter.includes(value);
+                  const categoryCount = getFilteredCount('category', value);
                   
                   return (
                     <button
                       key={value}
-                      onClick={() => setCategoryFilter(value)}
+                      onClick={() => {
+                        if (categoryFilter.includes(value)) {
+                          setCategoryFilter(categoryFilter.filter(c => c !== value));
+                        } else {
+                          setCategoryFilter([...categoryFilter, value]);
+                        }
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
                         isActive
                           ? 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -486,13 +528,19 @@ export default function InvestorDashboard() {
                   { value: 'Medium', color: 'yellow', label: 'Medium Risk' },
                   { value: 'High', color: 'red', label: 'High Risk' },
                 ].map(({ value, color, label }) => {
-                  const isActive = riskFilter === value;
-                  const riskCount = securities.filter(s => s.riskLevel === value).length;
+                  const isActive = riskFilter.includes(value);
+                  const riskCount = getFilteredCount('risk', value);
                   
                   return (
                     <button
                       key={value}
-                      onClick={() => setRiskFilter(value)}
+                      onClick={() => {
+                        if (riskFilter.includes(value)) {
+                          setRiskFilter(riskFilter.filter(r => r !== value));
+                        } else {
+                          setRiskFilter([...riskFilter, value]);
+                        }
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
                         isActive
                           ? 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -530,6 +578,81 @@ export default function InvestorDashboard() {
 
         {/* Main Content Area */}
         <main className="flex-1 lg:ml-64 px-4 sm:px-6 lg:px-8 py-8 pt-16 lg:pt-8">
+        
+        {/* Applied Filters Summary */}
+        {(categoryFilter.length > 0 || riskFilter.length > 0 || currencyFilter.length > 0 || searchQuery) && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Filter className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Active Filters:</span>
+                
+                {searchQuery && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                    Search: "{searchQuery}"
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="ml-1 hover:text-blue-900"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                
+                {categoryFilter.map(category => (
+                  <Badge key={category} variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                    {category}
+                    <button
+                      onClick={() => setCategoryFilter(categoryFilter.filter(c => c !== category))}
+                      className="ml-1 hover:text-blue-900"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                
+                {riskFilter.map(risk => (
+                  <Badge key={risk} variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                    {risk} Risk
+                    <button
+                      onClick={() => setRiskFilter(riskFilter.filter(r => r !== risk))}
+                      className="ml-1 hover:text-blue-900"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                
+                {currencyFilter.map(currency => (
+                  <Badge key={currency} variant="secondary" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                    {currency}
+                    <button
+                      onClick={() => setCurrencyFilter(currencyFilter.filter(c => c !== currency))}
+                      className="ml-1 hover:text-blue-900"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCategoryFilter([]);
+                  setRiskFilter([]);
+                  setCurrencyFilter([]);
+                  setSearchQuery('');
+                }}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear All
+              </Button>
+            </div>
+          </div>
+        )}
         {/* Dashboard Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -707,82 +830,122 @@ export default function InvestorDashboard() {
                           Filters:
                         </div>
                         
-                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                          <SelectTrigger className="w-36">
-                            <Tag className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder="Category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
-                            {availableCategories.map(category => (
-                              <SelectItem key={category} value={category}>
-                                <div className="flex items-center">
-                                  {category === 'Manufacturing' && <Factory className="w-4 h-4 mr-2" />}
-                                  {category === 'Retail' && <Store className="w-4 h-4 mr-2" />}
-                                  {category === 'Technology' && <Computer className="w-4 h-4 mr-2" />}
-                                  {category === 'Services' && <Wrench className="w-4 h-4 mr-2" />}
-                                  {category === 'Healthcare' && <Heart className="w-4 h-4 mr-2" />}
-                                  {category === 'Finance' && <Banknote className="w-4 h-4 mr-2" />}
-                                  {category === 'Construction' && <Hammer className="w-4 h-4 mr-2" />}
-                                  {category === 'Agriculture' && <Wheat className="w-4 h-4 mr-2" />}
-                                  {category}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {/* Multi-Select Category Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { value: 'Manufacturing', icon: Factory },
+                            { value: 'Retail', icon: Store },
+                            { value: 'Technology', icon: Computer },
+                            { value: 'Services', icon: Wrench },
+                            { value: 'Healthcare', icon: Heart },
+                            { value: 'Finance', icon: Banknote },
+                            { value: 'Construction', icon: Hammer },
+                            { value: 'Agriculture', icon: Wheat },
+                          ].map(({ value, icon: Icon }) => {
+                            const count = getFilteredCount('category', value);
+                            const isActive = categoryFilter.includes(value);
+                            return (
+                              <Button
+                                key={value}
+                                variant={isActive ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  if (isActive) {
+                                    setCategoryFilter(categoryFilter.filter(c => c !== value));
+                                  } else {
+                                    setCategoryFilter([...categoryFilter, value]);
+                                  }
+                                }}
+                                className={`flex items-center gap-1.5 ${
+                                  isActive 
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                {value}
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                  isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {count}
+                                </span>
+                              </Button>
+                            );
+                          })}
+                        </div>
 
-                        <Select value={riskFilter} onValueChange={setRiskFilter}>
-                          <SelectTrigger className="w-32">
-                            <Target className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder="Risk" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Risk</SelectItem>
-                            {availableRiskLevels.map(risk => (
-                              <SelectItem key={risk} value={risk}>
-                                <div className="flex items-center">
-                                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                                    risk === 'Low' ? 'bg-green-500' :
-                                    risk === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`} />
-                                  {risk} Risk
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {/* Multi-Select Risk Level Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                          {['Low', 'Medium', 'High'].map((risk) => {
+                            const count = getFilteredCount('risk', risk);
+                            const isActive = riskFilter.includes(risk);
+                            return (
+                              <Button
+                                key={risk}
+                                variant={isActive ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  if (isActive) {
+                                    setRiskFilter(riskFilter.filter(r => r !== risk));
+                                  } else {
+                                    setRiskFilter([...riskFilter, risk]);
+                                  }
+                                }}
+                                className={`flex items-center gap-1.5 ${
+                                  isActive 
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                                }`}
+                              >
+                                <div className={`w-2 h-2 rounded-full ${
+                                  risk === 'Low' ? 'bg-green-500' :
+                                  risk === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}></div>
+                                {risk} Risk
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                  isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {count}
+                                </span>
+                              </Button>
+                            );
+                          })}
+                        </div>
 
-                        <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
-                          <SelectTrigger className="w-28">
-                            <DollarSign className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder="Currency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            {availableCurrencies.map(currency => (
-                              <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
-                        {/* Clear Filters Button */}
-                        {(searchQuery || categoryFilter !== 'all' || riskFilter !== 'all' || currencyFilter !== 'all') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSearchQuery('');
-                              setCategoryFilter('all');
-                              setRiskFilter('all');
-                              setCurrencyFilter('all');
-                            }}
-                            className="text-gray-600 hover:text-gray-800"
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Clear All
-                          </Button>
-                        )}
+                        {/* Multi-Select Currency Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                          {availableCurrencies.map((currency) => {
+                            const count = getFilteredCount('currency', currency);
+                            const isActive = currencyFilter.includes(currency);
+                            return (
+                              <Button
+                                key={currency}
+                                variant={isActive ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  if (isActive) {
+                                    setCurrencyFilter(currencyFilter.filter(c => c !== currency));
+                                  } else {
+                                    setCurrencyFilter([...currencyFilter, currency]);
+                                  }
+                                }}
+                                className={`flex items-center gap-1.5 ${
+                                  isActive 
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
+                                }`}
+                              >
+                                <DollarSign className="w-3.5 h-3.5" />
+                                {currency}
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                  isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {count}
+                                </span>
+                              </Button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
