@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings, X, Tag, Target, Factory, Store, Computer, Wrench, Heart, Banknote, Hammer, Wheat, Trash2, Plus, Check, ArrowUpDown } from "lucide-react";
+import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings, X, Tag, Target, Factory, Store, Computer, Wrench, Heart, Banknote, Hammer, Wheat, Trash2, Plus, Check, ArrowUpDown, Grid, ChevronRight, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,6 +41,7 @@ export default function InvestorDashboard() {
   const [ownedStatusFilter, setOwnedStatusFilter] = useState<string>("all");
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
   const [watchlistItems, setWatchlistItems] = useState<Security[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Fetch marketplace securities
   const { data: securities = [], isLoading: securitiesLoading } = useQuery<Security[]>({
@@ -391,7 +392,144 @@ export default function InvestorDashboard() {
         </Button>
       </div>
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex">
+        {/* Mobile Menu Toggle */}
+        <div className="lg:hidden fixed top-20 left-4 z-50">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="bg-white shadow-md"
+          >
+            <Grid className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Global Category Sidebar */}
+        <div className={`w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen p-4 fixed left-0 top-16 z-40 overflow-y-auto transition-transform duration-300 lg:translate-x-0 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="space-y-1">
+            {/* Browse All Securities */}
+            <button
+              onClick={() => {
+                setCategoryFilter('all');
+                setRiskFilter('all');
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                categoryFilter === 'all' && riskFilter === 'all'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Home className="h-4 w-4" />
+              <span>Browse All Securities</span>
+            </button>
+
+            <div className="h-px bg-gray-200 my-3"></div>
+
+            {/* Categories Section */}
+            <div className="mb-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
+                Categories
+              </h3>
+              <div className="space-y-1">
+                {[
+                  { value: 'Manufacturing', icon: Factory, label: 'Manufacturing' },
+                  { value: 'Retail', icon: Store, label: 'Retail' },
+                  { value: 'Technology', icon: Computer, label: 'Technology' },
+                  { value: 'Services', icon: Wrench, label: 'Services' },
+                  { value: 'Healthcare', icon: Heart, label: 'Healthcare' },
+                  { value: 'Finance', icon: Banknote, label: 'Finance' },
+                  { value: 'Construction', icon: Hammer, label: 'Construction' },
+                  { value: 'Agriculture', icon: Wheat, label: 'Agriculture' },
+                ].map(({ value, icon: Icon, label }) => {
+                  const isActive = categoryFilter === value;
+                  const categoryCount = securities.filter(s => s.category === value).length;
+                  
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setCategoryFilter(value)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="flex-1 text-left">{label}</span>
+                      {categoryCount > 0 && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {categoryCount}
+                        </span>
+                      )}
+                      <ChevronRight className={`h-3 w-3 transition-transform ${isActive ? 'rotate-90' : ''}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-200 my-3"></div>
+
+            {/* Risk Levels Section */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
+                Risk Levels
+              </h3>
+              <div className="space-y-1">
+                {[
+                  { value: 'Low', color: 'green', label: 'Low Risk' },
+                  { value: 'Medium', color: 'yellow', label: 'Medium Risk' },
+                  { value: 'High', color: 'red', label: 'High Risk' },
+                ].map(({ value, color, label }) => {
+                  const isActive = riskFilter === value;
+                  const riskCount = securities.filter(s => s.riskLevel === value).length;
+                  
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setRiskFilter(value)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className={`w-3 h-3 rounded-full ${
+                        color === 'green' ? 'bg-green-500' :
+                        color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}></div>
+                      <span className="flex-1 text-left">{label}</span>
+                      {riskCount > 0 && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {riskCount}
+                        </span>
+                      )}
+                      <ChevronRight className={`h-3 w-3 transition-transform ${isActive ? 'rotate-90' : ''}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Overlay */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main Content Area */}
+        <main className="flex-1 lg:ml-64 px-4 sm:px-6 lg:px-8 py-8 pt-16 lg:pt-8">
         {/* Dashboard Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -1558,7 +1696,8 @@ export default function InvestorDashboard() {
             )}
           </DialogContent>
         </Dialog>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
