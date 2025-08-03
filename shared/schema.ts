@@ -93,6 +93,8 @@ export const receivables = pgTable("receivables", {
   currency: varchar("currency", { length: 3 }).notNull().default("USD"),
   dueDate: date("due_date").notNull(),
   description: text("description"),
+  category: varchar("category", { enum: ["Manufacturing", "Retail", "Technology", "Services", "Healthcare", "Finance", "Construction", "Agriculture"] }).notNull().default("Services"),
+  riskLevel: varchar("risk_level", { enum: ["Low", "Medium", "High"] }).notNull().default("Medium"),
   status: varchar("status", { enum: ["draft", "active", "securitized", "listed", "sold", "paid", "overdue"] }).notNull().default("draft"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

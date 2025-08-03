@@ -51,6 +51,8 @@ export default function MerchantDashboard() {
       currency: "USD",
       dueDate: "",
       description: "",
+      category: "Services",
+      riskLevel: "Medium",
     },
     mode: "onChange", // Enable real-time validation
   });
@@ -609,6 +611,59 @@ export default function MerchantDashboard() {
                             </FormItem>
                           )}
                         />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="category"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Category</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                    <SelectItem value="Retail">Retail</SelectItem>
+                                    <SelectItem value="Technology">Technology</SelectItem>
+                                    <SelectItem value="Services">Services</SelectItem>
+                                    <SelectItem value="Healthcare">Healthcare</SelectItem>
+                                    <SelectItem value="Finance">Finance</SelectItem>
+                                    <SelectItem value="Construction">Construction</SelectItem>
+                                    <SelectItem value="Agriculture">Agriculture</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="riskLevel"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Risk Level</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select risk level" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Low">Low Risk</SelectItem>
+                                    <SelectItem value="Medium">Medium Risk</SelectItem>
+                                    <SelectItem value="High">High Risk</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                         
                         <FormField
                           control={form.control}

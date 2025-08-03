@@ -169,6 +169,8 @@ export class DatabaseStorage implements IStorage {
         // Include receivable details
         debtorName: receivables.debtorName,
         receivableDueDate: receivables.dueDate,
+        category: receivables.category,
+        riskLevel: receivables.riskLevel,
         // Include merchant details
         merchantName: users.firstName,
         merchantLastName: users.lastName,

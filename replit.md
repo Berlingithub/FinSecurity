@@ -6,6 +6,33 @@ SecureReceivables is a full-stack web application for receivables securitization
 
 ## Recent Changes (August 2025)
 
+### Advanced Marketplace Categorization and Filtering System (August 2025)
+- Enhanced database schema with category and risk level fields for receivables:
+  - Added category field with options: Manufacturing, Retail, Technology, Services, Healthcare, Finance, Construction, Agriculture
+  - Added riskLevel field with options: Low, Medium, High
+  - Updated storage API to include new fields in marketplace listings
+- Enhanced merchant receivable creation form:
+  - Added category selection dropdown with visual icons
+  - Added risk level selection with color-coded indicators
+  - Updated form validation and default values
+- Implemented comprehensive search and filtering system for investor marketplace:
+  - Added prominent search bar with real-time filtering by title, description, debtor, or merchant name
+  - Added category filter with industry-specific icons (Factory, Store, Computer, etc.)
+  - Added risk level filter with color-coded indicators (green/yellow/red)
+  - Enhanced currency filter integration
+  - Added "Clear All Filters" functionality
+  - Combined filters work together for precise investment discovery
+- Enhanced product card display:
+  - Added category information with relevant icons
+  - Added risk level display with color-coded dots and text
+  - Improved visual hierarchy and information layout
+  - Enhanced filtering logic to work across all new fields
+- Improved user experience:
+  - Real-time search with instant results
+  - Visual filter indicators and clear filter states
+  - Responsive design for all screen sizes
+  - Enhanced skeleton loading states matching new card layout
+
 ### Production Deployment and Scalability Planning (January 2025)
 - Developed comprehensive production deployment strategy covering:
   - Backend architecture recommendations (Node.js/Express with PostgreSQL)

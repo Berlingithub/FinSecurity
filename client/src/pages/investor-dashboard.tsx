@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings } from "lucide-react";
+import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings, X, Tag, Target, Factory, Store, Computer, Wrench, Heart, Banknote, Hammer, Wheat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,9 @@ export default function InvestorDashboard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const queryClient = useQueryClient();
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortOption, setSortOption] = useState<SortOption>('amount-desc');
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -164,9 +168,37 @@ export default function InvestorDashboard() {
     ? purchasedSecurities 
     : purchasedSecurities.filter((s: Security) => s.status === ownedStatusFilter);
 
-  // Filter and sort securities
+  // Filter and sort securities with advanced filtering
   const filteredAndSortedSecurities = securities
-    .filter(security => currencyFilter === 'all' || security.currency === currencyFilter)
+    .filter(security => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          security.title?.toLowerCase().includes(query) ||
+          security.description?.toLowerCase().includes(query) ||
+          security.debtorName?.toLowerCase().includes(query) ||
+          security.merchantName?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Category filter
+      if (categoryFilter !== 'all' && security.category !== categoryFilter) {
+        return false;
+      }
+
+      // Risk level filter
+      if (riskFilter !== 'all' && security.riskLevel !== riskFilter) {
+        return false;
+      }
+
+      // Currency filter
+      if (currencyFilter !== 'all' && security.currency !== currencyFilter) {
+        return false;
+      }
+
+      return true;
+    })
     .sort((a, b) => {
       switch (sortOption) {
         case 'amount-asc':
@@ -182,8 +214,10 @@ export default function InvestorDashboard() {
       }
     });
 
-  // Get unique currencies
+  // Get unique values for filters
   const availableCurrencies = Array.from(new Set(securities.map(s => s.currency)));
+  const availableCategories = Array.from(new Set(securities.map(s => s.category).filter(Boolean)));
+  const availableRiskLevels = Array.from(new Set(securities.map(s => s.riskLevel).filter(Boolean)));
 
   // Calculate portfolio stats
   const totalInvestmentValue = securities.reduce((sum, s) => sum + parseFloat(s.totalValue), 0);
@@ -324,56 +358,130 @@ export default function InvestorDashboard() {
                 
                 <TabsContent value="marketplace" className="mt-0">
                   <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg font-semibold text-gray-900">Available Securities</CardTitle>
-                  <div className="flex items-center space-x-4">
-                    {/* Currency Filter */}
-                    <div className="flex items-center space-x-2">
-                      <Filter className="w-4 h-4 text-gray-500" />
-                      <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
-                        <SelectTrigger className="w-24">
-                          <SelectValue placeholder="Currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          {availableCurrencies.map(currency => (
-                            <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {/* Status Filter */}
-                    <div className="flex items-center space-x-2">
-                      <Select value={marketplaceStatusFilter} onValueChange={setMarketplaceStatusFilter}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="listed">Listed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg font-semibold text-gray-900">Available Securities</CardTitle>
+                        <div className="flex items-center space-x-2">
+                          <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
+                            <SelectTrigger className="w-40">
+                              <SelectValue placeholder="Sort by" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="amount-desc">Amount (High to Low)</SelectItem>
+                              <SelectItem value="amount-asc">Amount (Low to High)</SelectItem>
+                              <SelectItem value="date-desc">Date (Newest)</SelectItem>
+                              <SelectItem value="date-asc">Date (Oldest)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-                    {/* Sort Options */}
-                    <div className="flex items-center space-x-2">
-                      <SortAsc className="w-4 h-4 text-gray-500" />
-                      <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
-                        <SelectTrigger className="w-40">
-                          <SelectValue placeholder="Sort by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="amount-desc">Amount (High to Low)</SelectItem>
-                          <SelectItem value="amount-asc">Amount (Low to High)</SelectItem>
-                          <SelectItem value="date-desc">Date (Newest)</SelectItem>
-                          <SelectItem value="date-asc">Date (Oldest)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search by title, description, debtor, or merchant..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        />
+                        {searchQuery && (
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Advanced Filters */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Filter className="w-4 h-4 mr-2" />
+                          Filters:
+                        </div>
+                        
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                          <SelectTrigger className="w-36">
+                            <Tag className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder="Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {availableCategories.map(category => (
+                              <SelectItem key={category} value={category}>
+                                <div className="flex items-center">
+                                  {category === 'Manufacturing' && <Factory className="w-4 h-4 mr-2" />}
+                                  {category === 'Retail' && <Store className="w-4 h-4 mr-2" />}
+                                  {category === 'Technology' && <Computer className="w-4 h-4 mr-2" />}
+                                  {category === 'Services' && <Wrench className="w-4 h-4 mr-2" />}
+                                  {category === 'Healthcare' && <Heart className="w-4 h-4 mr-2" />}
+                                  {category === 'Finance' && <Banknote className="w-4 h-4 mr-2" />}
+                                  {category === 'Construction' && <Hammer className="w-4 h-4 mr-2" />}
+                                  {category === 'Agriculture' && <Wheat className="w-4 h-4 mr-2" />}
+                                  {category}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={riskFilter} onValueChange={setRiskFilter}>
+                          <SelectTrigger className="w-32">
+                            <Target className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder="Risk" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Risk</SelectItem>
+                            {availableRiskLevels.map(risk => (
+                              <SelectItem key={risk} value={risk}>
+                                <div className="flex items-center">
+                                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                                    risk === 'Low' ? 'bg-green-500' :
+                                    risk === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`} />
+                                  {risk} Risk
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+                          <SelectTrigger className="w-28">
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            <SelectValue placeholder="Currency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            {availableCurrencies.map(currency => (
+                              <SelectItem key={currency} value={currency}>{currency}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {/* Clear Filters Button */}
+                        {(searchQuery || categoryFilter !== 'all' || riskFilter !== 'all' || currencyFilter !== 'all') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSearchQuery('');
+                              setCategoryFilter('all');
+                              setRiskFilter('all');
+                              setCurrencyFilter('all');
+                            }}
+                            className="text-gray-600 hover:text-gray-800"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardHeader>
+                  </CardHeader>
               <CardContent className="space-y-4">
                 {securitiesLoading ? (
                   <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
@@ -411,20 +519,23 @@ export default function InvestorDashboard() {
                       </div>
                     ))}
                   </div>
-                ) : filteredMarketplace.length === 0 ? (
+                ) : filteredAndSortedSecurities.length === 0 ? (
                   <EmptyState
                     icon={Shield}
                     title="No Securities Available"
                     description="There are no securities available for purchase at the moment. Check back later for new investment opportunities or adjust your filters."
                     actionLabel="Clear Filters"
                     onAction={() => {
+                      setSearchQuery('');
+                      setCategoryFilter('all');
+                      setRiskFilter('all');
                       setCurrencyFilter("all");
                       setMarketplaceStatusFilter("all");
                     }}
                   />
                 ) : (
                   <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-                    {filteredMarketplace.map((security: Security) => (
+                    {filteredAndSortedSecurities.map((security: Security) => (
                       <div key={security.id} className="bg-white border border-gray-200 rounded-xl p-6 card-hover animate-slide-up shadow-sm hover:shadow-lg transition-all duration-300">
                         {/* Header with Status and Risk Grade */}
                         <div className="flex justify-between items-start mb-4">
@@ -503,6 +614,45 @@ export default function InvestorDashboard() {
                             <span className="text-sm font-medium text-gray-900">
                               {(security as any).debtorName || 'Business Client'}
                             </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-600">
+                              <Tag className="w-4 h-4 mr-2 text-indigo-500" />
+                              <span className="text-sm">Category</span>
+                            </div>
+                            <div className="flex items-center">
+                              {(security as any).category === 'Manufacturing' && <Factory className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Retail' && <Store className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Technology' && <Computer className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Services' && <Wrench className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Healthcare' && <Heart className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Finance' && <Banknote className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Construction' && <Hammer className="w-3 h-3 mr-1 text-gray-500" />}
+                              {(security as any).category === 'Agriculture' && <Wheat className="w-3 h-3 mr-1 text-gray-500" />}
+                              <span className="text-sm font-medium text-gray-900">
+                                {(security as any).category || 'Services'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-600">
+                              <Target className="w-4 h-4 mr-2 text-gray-500" />
+                              <span className="text-sm">Risk Level</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className={`w-2 h-2 rounded-full mr-2 ${
+                                (security as any).riskLevel === 'Low' ? 'bg-green-500' :
+                                (security as any).riskLevel === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                              }`} />
+                              <span className={`text-sm font-medium ${
+                                (security as any).riskLevel === 'Low' ? 'text-green-600' :
+                                (security as any).riskLevel === 'Medium' ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {(security as any).riskLevel || 'Medium'} Risk
+                              </span>
+                            </div>
                           </div>
 
                           {(security as any).receivableDueDate && (
