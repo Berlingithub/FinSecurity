@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle } from "lucide-react";
+import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -376,9 +376,39 @@ export default function InvestorDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {securitiesLoading ? (
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <SkeletonCard key={i} lines={4} className="animate-fade-in" />
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 animate-pulse">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="h-6 bg-gray-200 rounded w-20"></div>
+                          <div className="h-6 bg-gray-200 rounded w-12"></div>
+                        </div>
+                        <div className="text-center mb-4">
+                          <div className="h-9 bg-gray-200 rounded w-32 mx-auto mb-1"></div>
+                          <div className="h-4 bg-gray-200 rounded w-24 mx-auto"></div>
+                        </div>
+                        <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                        <div className="space-y-3 mb-4">
+                          <div className="flex justify-between">
+                            <div className="h-4 bg-gray-200 rounded w-16"></div>
+                            <div className="h-4 bg-gray-200 rounded w-20"></div>
+                          </div>
+                          <div className="flex justify-between">
+                            <div className="h-4 bg-gray-200 rounded w-20"></div>
+                            <div className="h-4 bg-gray-200 rounded w-12"></div>
+                          </div>
+                          <div className="flex justify-between">
+                            <div className="h-4 bg-gray-200 rounded w-16"></div>
+                            <div className="h-4 bg-gray-200 rounded w-24"></div>
+                          </div>
+                        </div>
+                        <div className="h-8 bg-gray-200 rounded mb-4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-32 mb-4"></div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="h-8 bg-gray-200 rounded"></div>
+                          <div className="h-8 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 ) : filteredMarketplace.length === 0 ? (
@@ -393,13 +423,12 @@ export default function InvestorDashboard() {
                     }}
                   />
                 ) : (
-                  filteredMarketplace.map((security: Security) => (
-                    <div key={security.id} className="border border-gray-200 rounded-lg p-4 card-hover animate-slide-up">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h4 className="font-semibold text-gray-900">{security.title}</h4>
-                            <Badge variant="outline">ID: {security.id.slice(0, 8)}</Badge>
+                  <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+                    {filteredMarketplace.map((security: Security) => (
+                      <div key={security.id} className="bg-white border border-gray-200 rounded-xl p-6 card-hover animate-slide-up shadow-sm hover:shadow-lg transition-all duration-300">
+                        {/* Header with Status and Risk Grade */}
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center space-x-2">
                             {(() => {
                               const statusInfo = getStatusInfo(security.status);
                               const StatusIcon = statusInfo.icon;
@@ -410,62 +439,121 @@ export default function InvestorDashboard() {
                                 </Badge>
                               );
                             })()}
-                            {security.riskGrade && (
-                              <Badge variant={
-                                security.riskGrade.startsWith('A') ? 'default' :
-                                security.riskGrade.startsWith('B') ? 'secondary' : 'destructive'
-                              }>
-                                {security.riskGrade}
-                              </Badge>
-                            )}
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div className="flex items-center">
-                              <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
-                              <span className="font-medium">{security.currency} {parseFloat(security.totalValue).toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                              <span>{security.expectedReturn ? `${security.expectedReturn}%` : 'N/A'} return</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Calendar className="w-4 h-4 text-blue-500 mr-1" />
-                              <span>{security.duration}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Building2 className="w-4 h-4 text-purple-500 mr-1" />
-                              <span>Merchant XYZ</span>
-                            </div>
-                          </div>
-                          {security.description && (
-                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{security.description}</p>
+                          {security.riskGrade && (
+                            <Badge variant={
+                              security.riskGrade.startsWith('A') ? 'default' :
+                              security.riskGrade.startsWith('B') ? 'secondary' : 'destructive'
+                            } className="text-xs font-semibold">
+                              {security.riskGrade}
+                            </Badge>
                           )}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDetails(security)}
-                          className="ml-4 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Details
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handlePurchaseClick(security)}
-                          className="ml-2 bg-primary-500 hover:bg-primary-600 text-white"
-                          disabled={purchaseMutation.isPending}
-                        >
-                          <ShoppingCart className="w-4 h-4 mr-1" />
-                          Purchase
-                        </Button>
+
+                        {/* Amount - Most Prominent */}
+                        <div className="text-center mb-4">
+                          <div className="text-3xl font-bold text-gray-900 mb-1">
+                            {security.currency} {parseFloat(security.totalValue).toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-500">Investment Amount</div>
+                        </div>
+
+                        {/* Security Title */}
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 min-h-[3.5rem]">
+                          {security.title}
+                        </h3>
+
+                        {/* Key Details Grid */}
+                        <div className="space-y-3 mb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-600">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              <span className="text-sm">Duration</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{security.duration}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-600">
+                              <TrendingUp className="w-4 h-4 mr-2 text-green-500" />
+                              <span className="text-sm">Expected Return</span>
+                            </div>
+                            <span className="text-sm font-medium text-green-600">
+                              {security.expectedReturn ? `${security.expectedReturn}%` : 'N/A'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-600">
+                              <Building2 className="w-4 h-4 mr-2 text-purple-500" />
+                              <span className="text-sm">Originator</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {(security as any).merchantName && (security as any).merchantLastName 
+                                ? `${(security as any).merchantName} ${(security as any).merchantLastName}`
+                                : 'Merchant Inc.'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-600">
+                              <FileText className="w-4 h-4 mr-2 text-blue-500" />
+                              <span className="text-sm">Debtor</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {(security as any).debtorName || 'Business Client'}
+                            </span>
+                          </div>
+
+                          {(security as any).receivableDueDate && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-gray-600">
+                                <Clock className="w-4 h-4 mr-2 text-orange-500" />
+                                <span className="text-sm">Due Date</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {format(new Date((security as any).receivableDueDate), "MMM dd, yyyy")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Description Snippet */}
+                        {security.description && (
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-600 line-clamp-2">
+                              {security.description}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Listing Date */}
+                        <div className="text-xs text-gray-500 mb-4 pb-3 border-b border-gray-100">
+                          Listed: {format(new Date(security.listedAt || security.createdAt || new Date()), "MMM dd, yyyy")}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleViewDetails(security)}
+                            className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 border-primary-200 hover:border-primary-300"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Button>
+                          <Button
+                            onClick={() => handlePurchaseClick(security)}
+                            className="bg-primary-500 hover:bg-primary-600 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                            disabled={purchaseMutation.isPending}
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Purchase
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-                        <span>Listed: {format(new Date(security.listedAt || security.createdAt || new Date()), "MMM dd, yyyy")}</span>
-                        <span>Status: Listed</span>
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
                   </CardContent>
                 </TabsContent>

@@ -29,7 +29,7 @@ export interface IStorage {
   createReceivable(merchantId: string, receivable: InsertReceivable): Promise<Receivable>;
   getReceivablesByMerchant(merchantId: string): Promise<Receivable[]>;
   getReceivable(id: string): Promise<Receivable | undefined>;
-  updateReceivable(id: string, receivable: Partial<InsertReceivable>): Promise<Receivable>;
+  updateReceivable(id: string, receivable: Partial<Receivable>): Promise<Receivable>;
   deleteReceivable(id: string): Promise<void>;
   // Security operations
   createSecurity(security: InsertSecurity): Promise<Security>;
@@ -111,7 +111,7 @@ export class DatabaseStorage implements IStorage {
     return receivable;
   }
 
-  async updateReceivable(id: string, receivableData: Partial<InsertReceivable>): Promise<Receivable> {
+  async updateReceivable(id: string, receivableData: Partial<Receivable>): Promise<Receivable> {
     const [receivable] = await db
       .update(receivables)
       .set({
@@ -146,10 +146,36 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(securities.createdAt));
   }
 
-  async getListedSecurities(): Promise<Security[]> {
+  async getListedSecurities(): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: securities.id,
+        receivableId: securities.receivableId,
+        merchantId: securities.merchantId,
+        title: securities.title,
+        description: securities.description,
+        totalValue: securities.totalValue,
+        currency: securities.currency,
+        expectedReturn: securities.expectedReturn,
+        riskGrade: securities.riskGrade,
+        duration: securities.duration,
+        status: securities.status,
+        listedAt: securities.listedAt,
+        purchasedBy: securities.purchasedBy,
+        purchasedAt: securities.purchasedAt,
+        paidAt: securities.paidAt,
+        createdAt: securities.createdAt,
+        updatedAt: securities.updatedAt,
+        // Include receivable details
+        debtorName: receivables.debtorName,
+        receivableDueDate: receivables.dueDate,
+        // Include merchant details
+        merchantName: users.firstName,
+        merchantLastName: users.lastName,
+      })
       .from(securities)
+      .leftJoin(receivables, eq(securities.receivableId, receivables.id))
+      .leftJoin(users, eq(securities.merchantId, users.id))
       .where(eq(securities.status, "listed"))
       .orderBy(desc(securities.listedAt));
   }

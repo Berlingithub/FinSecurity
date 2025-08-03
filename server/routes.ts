@@ -307,8 +307,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(security);
     } catch (error) {
       console.error("Error purchasing security:", error);
-      if (error.message === "Security not found or already purchased") {
-        res.status(400).json({ message: error.message });
+      if ((error as Error).message === "Security not found or already purchased") {
+        res.status(400).json({ message: (error as Error).message });
       } else {
         res.status(500).json({ message: "Failed to purchase security" });
       }
