@@ -28,6 +28,8 @@ export default function InvestorDashboard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+
+
   const [currencyFilter, setCurrencyFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [riskFilter, setRiskFilter] = useState<string[]>([]);
@@ -823,130 +825,241 @@ export default function InvestorDashboard() {
                         )}
                       </div>
 
-                      {/* Advanced Filters */}
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Filter className="w-4 h-4 mr-2" />
-                          Filters:
+                      {/* Advanced Multi-Select Filters */}
+                      <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-sm font-medium text-gray-700">
+                            <Filter className="w-4 h-4 mr-2" />
+                            Advanced Filters (Select multiple)
+                          </div>
+                          {(categoryFilter.length > 0 || riskFilter.length > 0 || currencyFilter.length > 0) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setCategoryFilter([]);
+                                setRiskFilter([]);
+                                setCurrencyFilter([]);
+                              }}
+                              className="text-gray-500 hover:text-gray-700 text-xs"
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Clear All Filters
+                            </Button>
+                          )}
                         </div>
                         
-                        {/* Multi-Select Category Buttons */}
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { value: 'Manufacturing', icon: Factory },
-                            { value: 'Retail', icon: Store },
-                            { value: 'Technology', icon: Computer },
-                            { value: 'Services', icon: Wrench },
-                            { value: 'Healthcare', icon: Heart },
-                            { value: 'Finance', icon: Banknote },
-                            { value: 'Construction', icon: Hammer },
-                            { value: 'Agriculture', icon: Wheat },
-                          ].map(({ value, icon: Icon }) => {
-                            const count = getFilteredCount('category', value);
-                            const isActive = categoryFilter.includes(value);
-                            return (
-                              <Button
-                                key={value}
-                                variant={isActive ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => {
-                                  if (isActive) {
-                                    setCategoryFilter(categoryFilter.filter(c => c !== value));
-                                  } else {
-                                    setCategoryFilter([...categoryFilter, value]);
-                                  }
-                                }}
-                                className={`flex items-center gap-1.5 ${
-                                  isActive 
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
-                                }`}
-                              >
-                                <Icon className="w-3.5 h-3.5" />
-                                {value}
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                  isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {count}
-                                </span>
-                              </Button>
-                            );
-                          })}
+                        {/* Categories Section */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">CATEGORIES</label>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { value: 'Manufacturing', icon: Factory, color: 'blue' },
+                              { value: 'Retail', icon: Store, color: 'green' },
+                              { value: 'Technology', icon: Computer, color: 'purple' },
+                              { value: 'Services', icon: Wrench, color: 'orange' },
+                              { value: 'Healthcare', icon: Heart, color: 'red' },
+                              { value: 'Finance', icon: Banknote, color: 'yellow' },
+                              { value: 'Construction', icon: Hammer, color: 'gray' },
+                              { value: 'Agriculture', icon: Wheat, color: 'emerald' },
+                            ].map(({ value, icon: Icon }) => {
+                              const count = getFilteredCount('category', value);
+                              const isActive = categoryFilter.includes(value);
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => {
+                                    if (isActive) {
+                                      setCategoryFilter(categoryFilter.filter(c => c !== value));
+                                    } else {
+                                      setCategoryFilter([...categoryFilter, value]);
+                                    }
+                                  }}
+                                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border-2 shadow-sm hover:shadow-md ${
+                                    isActive 
+                                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-105' 
+                                      : 'bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700'
+                                  }`}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                  <span>{value}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                                    isActive 
+                                      ? `bg-${color}-500 text-white` 
+                                      : `bg-gray-100 text-gray-600`
+                                  }`}>
+                                    {count}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
 
-                        {/* Multi-Select Risk Level Buttons */}
-                        <div className="flex flex-wrap gap-2">
-                          {['Low', 'Medium', 'High'].map((risk) => {
-                            const count = getFilteredCount('risk', risk);
-                            const isActive = riskFilter.includes(risk);
-                            return (
-                              <Button
-                                key={risk}
-                                variant={isActive ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => {
-                                  if (isActive) {
-                                    setRiskFilter(riskFilter.filter(r => r !== risk));
-                                  } else {
-                                    setRiskFilter([...riskFilter, risk]);
-                                  }
-                                }}
-                                className={`flex items-center gap-1.5 ${
-                                  isActive 
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
-                                }`}
-                              >
-                                <div className={`w-2 h-2 rounded-full ${
-                                  risk === 'Low' ? 'bg-green-500' :
-                                  risk === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}></div>
-                                {risk} Risk
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                  isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {count}
-                                </span>
-                              </Button>
-                            );
-                          })}
+                        {/* Risk Levels Section */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">RISK LEVELS</label>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { value: 'Low', color: 'green', bgColor: 'bg-green-500' },
+                              { value: 'Medium', color: 'yellow', bgColor: 'bg-yellow-500' },
+                              { value: 'High', color: 'red', bgColor: 'bg-red-500' }
+                            ].map(({ value, color, bgColor }) => {
+                              const count = getFilteredCount('risk', value);
+                              const isActive = riskFilter.includes(value);
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => {
+                                    if (isActive) {
+                                      setRiskFilter(riskFilter.filter(r => r !== value));
+                                    } else {
+                                      setRiskFilter([...riskFilter, value]);
+                                    }
+                                  }}
+                                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border-2 shadow-sm hover:shadow-md ${
+                                    isActive 
+                                      ? 'bg-gray-700 border-gray-700 text-white shadow-lg scale-105' 
+                                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                                  }`}
+                                >
+                                  <div className={`w-3 h-3 rounded-full ${bgColor}`}></div>
+                                  <span>{value} Risk</span>
+                                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${
+                                    isActive 
+                                      ? 'bg-gray-600 text-white' 
+                                      : 'bg-gray-200 text-gray-600'
+                                  }`}>
+                                    {count}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
 
-                        {/* Multi-Select Currency Buttons */}
-                        <div className="flex flex-wrap gap-2">
-                          {availableCurrencies.map((currency) => {
-                            const count = getFilteredCount('currency', currency);
-                            const isActive = currencyFilter.includes(currency);
-                            return (
-                              <Button
-                                key={currency}
-                                variant={isActive ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => {
-                                  if (isActive) {
-                                    setCurrencyFilter(currencyFilter.filter(c => c !== currency));
-                                  } else {
-                                    setCurrencyFilter([...currencyFilter, currency]);
-                                  }
-                                }}
-                                className={`flex items-center gap-1.5 ${
-                                  isActive 
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
-                                }`}
-                              >
-                                <DollarSign className="w-3.5 h-3.5" />
-                                {currency}
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                  isActive ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {count}
-                                </span>
-                              </Button>
-                            );
-                          })}
+                        {/* Currencies Section */}
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 mb-2 block">CURRENCIES</label>
+                          <div className="flex flex-wrap gap-2">
+                            {availableCurrencies.map((currency) => {
+                              const count = getFilteredCount('currency', currency);
+                              const isActive = currencyFilter.includes(currency);
+                              return (
+                                <button
+                                  key={currency}
+                                  onClick={() => {
+                                    if (isActive) {
+                                      setCurrencyFilter(currencyFilter.filter(c => c !== currency));
+                                    } else {
+                                      setCurrencyFilter([...currencyFilter, currency]);
+                                    }
+                                  }}
+                                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border-2 shadow-sm hover:shadow-md ${
+                                    isActive 
+                                      ? 'bg-green-600 border-green-600 text-white shadow-lg scale-105' 
+                                      : 'bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300 hover:text-green-700'
+                                  }`}
+                                >
+                                  <DollarSign className="w-4 h-4" />
+                                  <span>{currency}</span>
+                                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${
+                                    isActive 
+                                      ? 'bg-green-500 text-white' 
+                                      : 'bg-gray-200 text-gray-600'
+                                  }`}>
+                                    {count}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Applied Filters Summary */}
+                      {(categoryFilter.length > 0 || riskFilter.length > 0 || currencyFilter.length > 0 || searchQuery) && (
+                        <div className="border-t border-gray-200 pt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-gray-700">Active Filters</h4>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setCategoryFilter([]);
+                                setRiskFilter([]);
+                                setCurrencyFilter([]);
+                                setSearchQuery('');
+                              }}
+                              className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50"
+                            >
+                              Clear All
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {/* Search Query Filter */}
+                            {searchQuery && (
+                              <div className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                <Search className="w-3 h-3" />
+                                <span>Search: "{searchQuery}"</span>
+                                <button
+                                  onClick={() => setSearchQuery('')}
+                                  className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* Category Filters */}
+                            {categoryFilter.map((category) => (
+                              <div key={category} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                                <Tag className="w-3 h-3" />
+                                <span>{category}</span>
+                                <button
+                                  onClick={() => setCategoryFilter(categoryFilter.filter(c => c !== category))}
+                                  className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                            
+                            {/* Risk Level Filters */}
+                            {riskFilter.map((risk) => (
+                              <div key={risk} className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">
+                                <Shield className="w-3 h-3" />
+                                <span>{risk} Risk</span>
+                                <button
+                                  onClick={() => setRiskFilter(riskFilter.filter(r => r !== risk))}
+                                  className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                            
+                            {/* Currency Filters */}
+                            {currencyFilter.map((currency) => (
+                              <div key={currency} className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                <DollarSign className="w-3 h-3" />
+                                <span>{currency}</span>
+                                <button
+                                  onClick={() => setCurrencyFilter(currencyFilter.filter(c => c !== currency))}
+                                  className="ml-1 hover:bg-green-200 rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Results Count */}
+                          <div className="mt-3 text-sm text-gray-600">
+                            <span className="font-medium">{filteredAndSortedSecurities.length}</span> securities found
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
               <CardContent className="space-y-4">
