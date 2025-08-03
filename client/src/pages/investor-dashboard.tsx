@@ -210,14 +210,24 @@ export default function InvestorDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Investor Dashboard</h1>
             <p className="text-gray-600 mt-1">Welcome back! Explore new investment opportunities.</p>
           </div>
-          <Button 
-            onClick={handleLogout}
-            variant="outline"
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="outline"
+              onClick={() => window.location.href = "/profile"}
+              className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Profile & Settings
+            </Button>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Portfolio Overview */}

@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import Register from "@/pages/register";
 import MerchantDashboard from "@/pages/merchant-dashboard";
 import InvestorDashboard from "@/pages/investor-dashboard";
+import Profile from "@/pages/profile";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -37,11 +38,13 @@ function Router() {
             <>
               <Route path="/" component={MerchantDashboard} />
               <Route path="/dashboard" component={MerchantDashboard} />
+              <Route path="/profile" component={Profile} />
             </>
           ) : user?.role === "investor" ? (
             <>
               <Route path="/" component={InvestorDashboard} />
               <Route path="/dashboard" component={InvestorDashboard} />
+              <Route path="/profile" component={Profile} />
             </>
           ) : (
             <Route path="/" component={Home} />

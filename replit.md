@@ -50,6 +50,29 @@ SecureReceivables is a full-stack web application for receivables securitization
 - Real-time dashboard statistics reflecting both marketplace and purchased securities
 - Enhanced error handling for purchase conflicts and authorization
 
+### Payment Settlement and Wallet System
+- Implemented comprehensive wallet balance functionality for investors
+- Added walletBalance field to user schema with automatic migration
+- Built "Mark as Paid" functionality for merchants to process payments
+- Created payment settlement API endpoints with proper authorization
+- Enhanced investor dashboard with prominent wallet balance display
+- Automatic balance updates when merchants mark securities as paid
+- Complete payment lifecycle from receivable creation to final settlement
+
+### User Profile Management System
+- Enhanced user schema with profile fields (phoneNumber, address)
+- Created comprehensive Profile/Settings page accessible from both dashboards
+- Implemented client-side persistence using localStorage for profile data
+- Built profile management API endpoints with proper authorization
+- Features include:
+  - View and edit personal information (name, phone, address)
+  - Professional bank details placeholder section
+  - Form validation using Zod schemas
+  - Real-time profile updates with unsaved changes tracking
+  - Responsive design with clean navigation integration
+- Profile navigation integrated into both merchant and investor dashboards
+- Complete CRUD operations for user profile data with proper error handling
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

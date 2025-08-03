@@ -235,6 +235,19 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
+
+  // Profile management methods
+  async updateUserProfile(userId: string, profileData: Partial<UpsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...profileData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
 }
 
 export const storage = new DatabaseStorage();

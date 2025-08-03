@@ -35,6 +35,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { enum: ["merchant", "investor"] }).notNull(),
   walletBalance: decimal("wallet_balance", { precision: 12, scale: 2 }).default("0.00"),
+  phoneNumber: varchar("phone_number"),
+  address: text("address"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -51,6 +53,15 @@ export const registerUserSchema = insertUserSchema.pick({
   lastName: true,
   role: true,
 });
+
+export const updateProfileSchema = createInsertSchema(users).pick({
+  firstName: true,
+  lastName: true,
+  phoneNumber: true,
+  address: true,
+});
+
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 
 // Receivables table
 export const receivables = pgTable("receivables", {

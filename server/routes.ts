@@ -354,6 +354,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile management routes
+  app.put('/api/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profileData = req.body;
+
+      // Validate profile data
+      const validatedData = {
+        firstName: profileData.firstName || null,
+        lastName: profileData.lastName || null,
+        phoneNumber: profileData.phoneNumber || null,
+        address: profileData.address || null,
+      };
+
+      const updatedUser = await storage.updateUserProfile(userId, validatedData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
