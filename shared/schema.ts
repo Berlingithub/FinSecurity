@@ -77,7 +77,7 @@ export const securities = pgTable("securities", {
   expectedReturn: decimal("expected_return", { precision: 5, scale: 2 }), // percentage
   riskGrade: varchar("risk_grade", { enum: ["A", "A-", "B+", "B", "B-", "C+", "C", "C-"] }),
   duration: varchar("duration").notNull(), // e.g., "90 days", "6 months"
-  status: varchar("status", { enum: ["securitized", "listed", "purchased", "funded", "completed"] }).notNull().default("securitized"),
+  status: varchar("status", { enum: ["draft", "securitized", "listed", "purchased", "payment_due", "paid", "cancelled"] }).notNull().default("draft"),
   listedAt: timestamp("listed_at"),
   purchasedBy: varchar("purchased_by").references(() => users.id),
   purchasedAt: timestamp("purchased_at"),

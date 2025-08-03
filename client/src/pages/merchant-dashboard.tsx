@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit, Lock, TrendingUp, Eye } from "lucide-react";
+import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit, Lock, TrendingUp, Eye, Filter, CheckCircle, AlertTriangle, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -28,6 +28,7 @@ export default function MerchantDashboard() {
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
   const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const form = useForm<CreateReceivable>({
     resolver: zodResolver(createReceivableSchema),
@@ -245,6 +246,40 @@ export default function MerchantDashboard() {
     return securities.find(s => s.receivableId === receivableId);
   };
 
+  // Helper function to get status badge variant and icon
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case "draft":
+        return { variant: "secondary" as const, icon: Edit, color: "text-gray-600" };
+      case "securitized":
+        return { variant: "outline" as const, icon: Shield, color: "text-blue-600" };
+      case "listed":
+        return { variant: "default" as const, icon: TrendingUp, color: "text-green-600" };
+      case "purchased":
+        return { variant: "default" as const, icon: CheckCircle, color: "text-blue-600" };
+      case "payment_due":
+        return { variant: "destructive" as const, icon: AlertTriangle, color: "text-orange-600" };
+      case "paid":
+        return { variant: "default" as const, icon: CheckCircle, color: "text-green-600" };
+      case "cancelled":
+        return { variant: "secondary" as const, icon: XCircle, color: "text-red-600" };
+      default:
+        return { variant: "secondary" as const, icon: Clock, color: "text-gray-600" };
+    }
+  };
+
+  // Filter receivables based on status
+  const filteredReceivables = statusFilter === "all" 
+    ? receivables 
+    : receivables.filter(r => {
+        const security = getSecurityForReceivable(r.id);
+        if (statusFilter === "draft") return r.status === "draft" || r.status === "active";
+        if (statusFilter === "securitized") return r.status === "securitized";
+        if (statusFilter === "listed") return r.status === "listed";
+        if (statusFilter === "sold") return security?.status === "purchased";
+        return false;
+      });
+
   // Calculate totals
   const totalReceivables = receivables.reduce((sum, r) => sum + parseFloat(r.amount), 0);
   const activeReceivables = receivables.filter(r => r.status === "draft" || r.status === "active").length;
@@ -252,6 +287,7 @@ export default function MerchantDashboard() {
     .filter(r => r.status === "securitized" || r.status === "listed")
     .reduce((sum, r) => sum + parseFloat(r.amount), 0);
   const listedSecurities = securities.filter(s => s.status === "listed").length;
+  const soldSecurities = securities.filter(s => s.status === "purchased").length;
 
   // Redirect if not authenticated or not a merchant
   useEffect(() => {
@@ -310,7 +346,7 @@ export default function MerchantDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -378,6 +414,23 @@ export default function MerchantDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Sold Securities</p>
+                  <p className="text-2xl font-bold text-gray-900">{soldSecurities}</p>
+                </div>
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-blue-500" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className="text-gray-600">Completed transactions</span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Content */}
@@ -386,13 +439,27 @@ export default function MerchantDashboard() {
             <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-semibold text-gray-900">Your Receivables</CardTitle>
-                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary-500 hover:bg-primary-600 text-white">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Receivable
-                    </Button>
-                  </DialogTrigger>
+                <div className="flex items-center space-x-4">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-40">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="securitized">Securitized</SelectItem>
+                      <SelectItem value="listed">Listed</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-primary-500 hover:bg-primary-600 text-white">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Receivable
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                       <DialogTitle>Add New Receivable</DialogTitle>
@@ -494,7 +561,8 @@ export default function MerchantDashboard() {
                       </form>
                     </Form>
                   </DialogContent>
-                </Dialog>
+                  </Dialog>
+                </div>
               </CardHeader>
               
               {/* Securitization Modal */}
@@ -631,15 +699,19 @@ export default function MerchantDashboard() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
                   </div>
-                ) : receivables.length === 0 ? (
+                ) : filteredReceivables.length === 0 ? (
                   <div className="text-center py-8">
                     <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No receivables yet</p>
-                    <p className="text-sm text-gray-500">Add your first receivable to get started</p>
+                    <p className="text-gray-600">
+                      {statusFilter === "all" ? "No receivables yet" : `No receivables found with status: ${statusFilter}`}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {statusFilter === "all" ? "Add your first receivable to get started" : "Try changing the filter to see more results"}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {receivables.map((receivable) => {
+                    {filteredReceivables.map((receivable) => {
                       const security = getSecurityForReceivable(receivable.id);
                       const canSecuritize = receivable.status === "draft" || receivable.status === "active";
                       const isSecuritized = receivable.status === "securitized";
@@ -658,16 +730,19 @@ export default function MerchantDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                              <Badge 
-                                variant={
-                                  receivable.status === "active" || receivable.status === "draft" ? "default" : 
-                                  receivable.status === "overdue" ? "destructive" : 
-                                  receivable.status === "securitized" ? "secondary" :
-                                  receivable.status === "listed" ? "outline" : "secondary"
-                                }
-                              >
-                                {receivable.status}
-                              </Badge>
+                              {(() => {
+                                const security = getSecurityForReceivable(receivable.id);
+                                const displayStatus = security?.status === "purchased" ? "sold" : receivable.status;
+                                const statusInfo = getStatusInfo(displayStatus);
+                                const StatusIcon = statusInfo.icon;
+                                
+                                return (
+                                  <Badge variant={statusInfo.variant} className="flex items-center space-x-1">
+                                    <StatusIcon className="w-3 h-3" />
+                                    <span className="capitalize">{displayStatus.replace('_', ' ')}</span>
+                                  </Badge>
+                                );
+                              })()}
                               <p className="text-sm text-gray-600">Due: {format(new Date(receivable.dueDate), "MMM dd, yyyy")}</p>
                               
                               {/* Action buttons based on status */}

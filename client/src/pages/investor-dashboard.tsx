@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText } from "lucide-react";
+import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +27,8 @@ export default function InvestorDashboard() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
+  const [marketplaceStatusFilter, setMarketplaceStatusFilter] = useState<string>("all");
+  const [ownedStatusFilter, setOwnedStatusFilter] = useState<string>("all");
 
   // Fetch marketplace securities
   const { data: securities = [], isLoading: securitiesLoading } = useQuery<Security[]>({
@@ -125,6 +127,38 @@ export default function InvestorDashboard() {
     setSelectedSecurity(security);
     setIsAgreementModalOpen(true);
   };
+
+  // Helper function to get status badge variant and icon
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case "draft":
+        return { variant: "secondary" as const, icon: Edit, color: "text-gray-600" };
+      case "securitized":
+        return { variant: "outline" as const, icon: Shield, color: "text-blue-600" };
+      case "listed":
+        return { variant: "default" as const, icon: TrendingUp, color: "text-green-600" };
+      case "purchased":
+        return { variant: "default" as const, icon: CheckCircle, color: "text-blue-600" };
+      case "payment_due":
+        return { variant: "destructive" as const, icon: AlertTriangle, color: "text-orange-600" };
+      case "paid":
+        return { variant: "default" as const, icon: CheckCircle, color: "text-green-600" };
+      case "cancelled":
+        return { variant: "secondary" as const, icon: XCircle, color: "text-red-600" };
+      default:
+        return { variant: "secondary" as const, icon: Clock, color: "text-gray-600" };
+    }
+  };
+
+  // Filter marketplace securities
+  const filteredMarketplace = marketplaceStatusFilter === "all" 
+    ? marketplacePaged 
+    : marketplacePaged.filter(s => s.status === marketplaceStatusFilter);
+
+  // Filter owned securities
+  const filteredOwnedSecurities = ownedStatusFilter === "all" 
+    ? ownedSecurities 
+    : ownedSecurities.filter(s => s.status === ownedStatusFilter);
 
   // Filter and sort securities
   const filteredAndSortedSecurities = securities
@@ -292,6 +326,19 @@ export default function InvestorDashboard() {
                       </Select>
                     </div>
                     
+                    {/* Status Filter */}
+                    <div className="flex items-center space-x-2">
+                      <Select value={marketplaceStatusFilter} onValueChange={setMarketplaceStatusFilter}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="listed">Listed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {/* Sort Options */}
                     <div className="flex items-center space-x-2">
                       <SortAsc className="w-4 h-4 text-gray-500" />
@@ -315,20 +362,30 @@ export default function InvestorDashboard() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
                   </div>
-                ) : filteredAndSortedSecurities.length === 0 ? (
+                ) : filteredMarketplace.length === 0 ? (
                   <div className="text-center py-8">
                     <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Securities Available</h3>
                     <p className="text-sm text-gray-500">Check back later for new investment opportunities</p>
                   </div>
                 ) : (
-                  filteredAndSortedSecurities.map((security) => (
+                  filteredMarketplace.map((security) => (
                     <div key={security.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <h4 className="font-semibold text-gray-900">{security.title}</h4>
                             <Badge variant="outline">ID: {security.id.slice(0, 8)}</Badge>
+                            {(() => {
+                              const statusInfo = getStatusInfo(security.status);
+                              const StatusIcon = statusInfo.icon;
+                              return (
+                                <Badge variant={statusInfo.variant} className="flex items-center space-x-1">
+                                  <StatusIcon className="w-3 h-3" />
+                                  <span className="capitalize">{security.status.replace('_', ' ')}</span>
+                                </Badge>
+                              );
+                            })()}
                             {security.riskGrade && (
                               <Badge variant={
                                 security.riskGrade.startsWith('A') ? 'default' :
@@ -391,31 +448,58 @@ export default function InvestorDashboard() {
 
                 <TabsContent value="purchased" className="mt-0">
                   <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900">My Purchased Securities</CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg font-semibold text-gray-900">My Purchased Securities</CardTitle>
+                      <div className="flex items-center space-x-2">
+                        <Filter className="w-4 h-4 text-gray-500" />
+                        <Select value={ownedStatusFilter} onValueChange={setOwnedStatusFilter}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Filter by status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="purchased">Purchased</SelectItem>
+                            <SelectItem value="payment_due">Payment Due</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {purchasedLoading ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
                       </div>
-                    ) : purchasedSecurities.length === 0 ? (
+                    ) : filteredOwnedSecurities.length === 0 ? (
                       <div className="text-center py-8">
                         <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Securities Purchased</h3>
-                        <p className="text-sm text-gray-500">Browse the marketplace to find investment opportunities</p>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          {ownedStatusFilter === "all" ? "No Securities Purchased" : `No securities with status: ${ownedStatusFilter.replace('_', ' ')}`}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {ownedStatusFilter === "all" ? "Browse the marketplace to find investment opportunities" : "Try changing the filter to see more results"}
+                        </p>
                       </div>
                     ) : (
-                      purchasedSecurities.map((security) => (
+                      filteredOwnedSecurities.map((security) => (
                         <div key={security.id} className="border border-gray-200 rounded-lg p-4 bg-green-50 border-green-200">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex-1">
                               <div className="flex items-center space-x-3 mb-2">
                                 <h4 className="font-semibold text-gray-900">{security.title}</h4>
                                 <Badge variant="outline">ID: {security.id.slice(0, 8)}</Badge>
-                                <Badge variant="default" className="bg-green-600">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Purchased
-                                </Badge>
+                                {(() => {
+                                  const statusInfo = getStatusInfo(security.status);
+                                  const StatusIcon = statusInfo.icon;
+                                  return (
+                                    <Badge variant={statusInfo.variant} className="flex items-center space-x-1">
+                                      <StatusIcon className="w-3 h-3" />
+                                      <span className="capitalize">{security.status.replace('_', ' ')}</span>
+                                    </Badge>
+                                  );
+                                })()}
                                 {security.riskGrade && (
                                   <Badge variant={
                                     security.riskGrade.startsWith('A') ? 'default' :
