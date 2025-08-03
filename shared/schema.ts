@@ -9,6 +9,7 @@ import {
   text,
   decimal,
   date,
+  integer,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -126,8 +127,11 @@ export const securities = pgTable("securities", {
   totalValue: decimal("total_value", { precision: 12, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("USD"),
   expectedReturn: decimal("expected_return", { precision: 5, scale: 2 }), // percentage
+  yieldRate: decimal("yield_rate", { precision: 5, scale: 2 }), // annualized yield percentage
   riskGrade: varchar("risk_grade", { enum: ["A", "A-", "B+", "B", "B-", "C+", "C", "C-"] }),
   duration: varchar("duration").notNull(), // e.g., "90 days", "6 months"
+  viewCount: integer("view_count").default(0),
+  watchlistCount: integer("watchlist_count").default(0),
   status: varchar("status", { enum: ["draft", "securitized", "listed", "purchased", "payment_due", "paid", "cancelled"] }).notNull().default("draft"),
   listedAt: timestamp("listed_at"),
   purchasedBy: varchar("purchased_by").references(() => users.id),

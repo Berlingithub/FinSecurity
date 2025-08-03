@@ -21,7 +21,7 @@ import EmptyState from "@/components/EmptyState";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SkeletonCard from "@/components/SkeletonCard";
 
-type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc';
+type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc' | 'newest' | 'yield-desc' | 'risk-asc' | 'popular';
 
 export default function InvestorDashboard() {
   const { toast } = useToast();
@@ -32,7 +32,7 @@ export default function InvestorDashboard() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [riskFilter, setRiskFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortOption, setSortOption] = useState<SortOption>('amount-desc');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -173,6 +173,40 @@ export default function InvestorDashboard() {
     return total + parseFloat(security.totalValue);
   }, 0);
 
+  // Badge logic functions
+  const isNewListing = (security: Security) => {
+    if (!security.listedAt) return false;
+    const listedDate = new Date(security.listedAt);
+    const now = new Date();
+    const diffHours = (now.getTime() - listedDate.getTime()) / (1000 * 60 * 60);
+    return diffHours <= 24;
+  };
+
+  const isHighYield = (security: Security) => {
+    return security.yieldRate && parseFloat(security.yieldRate) > 10.0;
+  };
+
+  const isLowRisk = (security: Security) => {
+    return security.riskLevel === 'Low';
+  };
+
+  const isPopular = (security: Security) => {
+    // Get top 5 securities by combined view count and watchlist count
+    const popularityScore = (security.viewCount || 0) + (security.watchlistCount || 0) * 2;
+    const allScores = securities.map(s => (s.viewCount || 0) + (s.watchlistCount || 0) * 2);
+    const sortedScores = [...allScores].sort((a, b) => b - a);
+    return sortedScores.slice(0, 5).includes(popularityScore);
+  };
+
+  const getBadges = (security: Security) => {
+    const badges = [];
+    if (isNewListing(security)) badges.push({ type: 'new', label: 'New Listing', color: 'bg-green-500' });
+    if (isHighYield(security)) badges.push({ type: 'yield', label: 'High Yield', color: 'bg-yellow-500' });
+    if (isLowRisk(security)) badges.push({ type: 'risk', label: 'Low Risk', color: 'bg-blue-500' });
+    if (isPopular(security)) badges.push({ type: 'popular', label: 'Popular', color: 'bg-purple-500' });
+    return badges;
+  };
+
 
 
   // Redirect if not authenticated or not an investor
@@ -296,6 +330,17 @@ export default function InvestorDashboard() {
           return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
         case 'date-desc':
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'newest':
+          return new Date(b.listedAt || b.createdAt || 0).getTime() - new Date(a.listedAt || a.createdAt || 0).getTime();
+        case 'yield-desc':
+          return parseFloat(b.yieldRate || '0') - parseFloat(a.yieldRate || '0');
+        case 'risk-asc':
+          const riskOrder = { 'Low': 1, 'Medium': 2, 'High': 3 };
+          return (riskOrder[a.riskLevel as keyof typeof riskOrder] || 2) - (riskOrder[b.riskLevel as keyof typeof riskOrder] || 2);
+        case 'popular':
+          const aScore = (a.viewCount || 0) + (a.watchlistCount || 0) * 2;
+          const bScore = (b.viewCount || 0) + (b.watchlistCount || 0) * 2;
+          return bScore - aScore;
         default:
           return 0;
       }
@@ -478,10 +523,15 @@ export default function InvestorDashboard() {
                         <CardTitle className="text-lg font-semibold text-gray-900">Available Securities</CardTitle>
                         <div className="flex items-center space-x-2">
                           <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
-                            <SelectTrigger className="w-40">
+                            <SelectTrigger className="w-48">
+                              <ArrowUpDown className="w-4 h-4 mr-2" />
                               <SelectValue placeholder="Sort by" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="newest">Newest Listings</SelectItem>
+                              <SelectItem value="yield-desc">Highest Yield</SelectItem>
+                              <SelectItem value="risk-asc">Lowest Risk</SelectItem>
+                              <SelectItem value="popular">Most Popular</SelectItem>
                               <SelectItem value="amount-desc">Amount (High to Low)</SelectItem>
                               <SelectItem value="amount-asc">Amount (Low to High)</SelectItem>
                               <SelectItem value="date-desc">Date (Newest)</SelectItem>
@@ -678,6 +728,20 @@ export default function InvestorDashboard() {
                   <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     {filteredAndSortedSecurities.map((security: Security) => (
                       <div key={security.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        {/* Dynamic Visual Badges */}
+                        {getBadges(security).length > 0 && (
+                          <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
+                            {getBadges(security).map((badge, index) => (
+                              <div
+                                key={index}
+                                className={`${badge.color} text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm`}
+                              >
+                                {badge.label}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         {/* Product Header with Status Badge */}
                         <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-100">
                           <div className="flex justify-between items-start">
@@ -746,6 +810,11 @@ export default function InvestorDashboard() {
                                 {security.expectedReturn}% Expected Return
                               </div>
                             )}
+                            {security.yieldRate && (
+                              <div className="mt-1 text-base font-medium text-blue-600">
+                                {security.yieldRate}% Annual Yield
+                              </div>
+                            )}
                           </div>
 
                           {/* Security Title */}
@@ -772,6 +841,18 @@ export default function InvestorDashboard() {
                               {security.expectedReturn ? `${security.expectedReturn}%` : 'N/A'}
                             </span>
                           </div>
+
+                          {security.yieldRate && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-gray-600">
+                                <TrendingUp className="w-4 h-4 mr-2 text-blue-500" />
+                                <span className="text-sm">Annual Yield</span>
+                              </div>
+                              <span className="text-sm font-medium text-blue-600">
+                                {security.yieldRate}%
+                              </span>
+                            </div>
+                          )}
                           
                           <div className="flex items-center justify-between">
                             <div className="flex items-center text-gray-600">
@@ -814,6 +895,18 @@ export default function InvestorDashboard() {
                               </span>
                             </div>
                           </div>
+
+                          {(security.viewCount || security.watchlistCount) && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-gray-600">
+                                <Eye className="w-4 h-4 mr-2 text-gray-500" />
+                                <span className="text-sm">Popularity</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-600">
+                                {security.viewCount || 0} views, {security.watchlistCount || 0} saved
+                              </span>
+                            </div>
+                          )}
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center text-gray-600">
