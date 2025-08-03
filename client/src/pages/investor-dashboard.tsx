@@ -38,6 +38,9 @@ export default function InvestorDashboard() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showRiskDropdown, setShowRiskDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [quickViewSecurity, setQuickViewSecurity] = useState<Security | null>(null);
+  const [compareList, setCompareList] = useState<string[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -53,6 +56,19 @@ export default function InvestorDashboard() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Compare functionality
+  const toggleCompare = (securityId: string) => {
+    setCompareList(prev => 
+      prev.includes(securityId) 
+        ? prev.filter(id => id !== securityId)
+        : [...prev, securityId]
+    );
+  };
+
+  const clearCompareList = () => {
+    setCompareList([]);
+  };
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -1080,6 +1096,17 @@ export default function InvestorDashboard() {
                             Clear All
                           </Button>
                         )}
+
+                        {/* Compare Selected Button */}
+                        {compareList.length > 0 && (
+                          <Button
+                            onClick={() => setShowCompareModal(true)}
+                            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md"
+                          >
+                            <Target className="w-4 h-4 mr-2" />
+                            Compare Selected ({compareList.length})
+                          </Button>
+                        )}
                       </div>
 
                       {/* Applied Filters Summary */}
@@ -1247,7 +1274,31 @@ export default function InvestorDashboard() {
                 ) : (
                   <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     {filteredAndSortedSecurities.map((security: Security) => (
-                      <div key={security.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                      <div key={security.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative">
+                        {/* Quick View & Compare Actions */}
+                        <div className="absolute top-3 right-3 z-20 flex gap-2">
+                          {/* Compare Checkbox */}
+                          <label className="flex items-center bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-gray-200 hover:bg-white cursor-pointer transition-all">
+                            <input
+                              type="checkbox"
+                              checked={compareList.includes(security.id)}
+                              onChange={() => toggleCompare(security.id)}
+                              className="w-3 h-3 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                            />
+                            <span className="ml-1 text-xs font-medium text-gray-700">Compare</span>
+                          </label>
+                          
+                          {/* Quick View Button */}
+                          <button
+                            onClick={() => setQuickViewSecurity(security)}
+                            className="flex items-center bg-blue-600/90 backdrop-blur-sm text-white rounded-lg px-2 py-1 shadow-sm hover:bg-blue-700 transition-all"
+                            title="Quick View"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            <span className="text-xs font-medium">Quick View</span>
+                          </button>
+                        </div>
+
                         {/* Dynamic Visual Badges */}
                         {getBadges(security).length > 0 && (
                           <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
@@ -2075,6 +2126,208 @@ export default function InvestorDashboard() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Quick View Modal */}
+        <Dialog open={!!quickViewSecurity} onOpenChange={(open) => !open && setQuickViewSecurity(null)}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-blue-600" />
+                Quick View - {quickViewSecurity?.title}
+              </DialogTitle>
+              <DialogDescription>
+                Get a quick overview of this security without leaving the marketplace
+              </DialogDescription>
+            </DialogHeader>
+            
+            {quickViewSecurity && (
+              <div className="space-y-6">
+                {/* Key Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-700">Total Value</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-700">
+                      {quickViewSecurity.currency} {parseFloat(quickViewSecurity.totalValue).toLocaleString()}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-gray-700">Expected Return</span>
+                    </div>
+                    <p className="text-2xl font-bold text-green-700">
+                      {quickViewSecurity.expectedReturn ? `${quickViewSecurity.expectedReturn}%` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Details */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-3">Quick Details</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Duration:</span>
+                      <span className="font-medium">{quickViewSecurity.duration}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Risk Level:</span>
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          (quickViewSecurity as any).riskLevel === 'Low' ? 'bg-green-500' :
+                          (quickViewSecurity as any).riskLevel === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                        }`} />
+                        <span className="font-medium">
+                          {(quickViewSecurity as any).riskLevel || 'Medium'} Risk
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Category:</span>
+                      <span className="font-medium">{(quickViewSecurity as any).category || 'Services'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Currency:</span>
+                      <span className="font-medium">{quickViewSecurity.currency}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {quickViewSecurity.description && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
+                    <p className="text-gray-700 text-sm leading-relaxed">{quickViewSecurity.description}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setQuickViewSecurity(null);
+                      setLocation(`/security/${quickViewSecurity.id}`);
+                    }}
+                    className="flex-1"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Full Details
+                  </Button>
+                  
+                  {isInWatchlist(quickViewSecurity.id) ? (
+                    <Button 
+                      variant="destructive"
+                      onClick={() => removeFromWatchlistMutation.mutate(quickViewSecurity.id)}
+                      disabled={removeFromWatchlistMutation.isPending}
+                      className="flex-1"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove from Watchlist
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => addToWatchlistMutation.mutate(quickViewSecurity.id)}
+                      disabled={addToWatchlistMutation.isPending}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Add to Watchlist
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Compare Modal */}
+        <Dialog open={showCompareModal} onOpenChange={setShowCompareModal}>
+          <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-purple-600" />
+                Compare Securities ({compareList.length})
+              </DialogTitle>
+              <DialogDescription>
+                Side-by-side comparison of selected securities
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {compareList.length === 0 ? (
+                <div className="text-center py-8">
+                  <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Securities Selected</h3>
+                  <p className="text-sm text-gray-500">Select securities from the marketplace to compare them side by side.</p>
+                  <Button 
+                    onClick={() => setShowCompareModal(false)}
+                    className="mt-4"
+                  >
+                    Back to Marketplace
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-sm text-gray-600">
+                      Comparing {compareList.length} securities. This is a demonstration - full comparison features would be implemented here.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={clearCompareList}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Clear All
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                    <div className="text-center">
+                      <Target className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-blue-900 mb-2">Compare Feature Coming Soon</h3>
+                      <p className="text-blue-700 mb-4">
+                        You've selected {compareList.length} securities for comparison. In the full version, this would show:
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-blue-800 mb-6">
+                        <div className="bg-white p-3 rounded border border-blue-300">
+                          <strong>Side-by-side comparison</strong><br />
+                          Key metrics, returns, risks
+                        </div>
+                        <div className="bg-white p-3 rounded border border-blue-300">
+                          <strong>Performance charts</strong><br />
+                          Historical data visualization
+                        </div>
+                        <div className="bg-white p-3 rounded border border-blue-300">
+                          <strong>Risk analysis</strong><br />
+                          Detailed risk breakdowns
+                        </div>
+                      </div>
+                      <div className="flex gap-3 justify-center">
+                        <Button 
+                          onClick={() => setShowCompareModal(false)}
+                          variant="outline"
+                        >
+                          Back to Marketplace
+                        </Button>
+                        <Button 
+                          onClick={clearCompareList}
+                          className="bg-purple-600 hover:bg-purple-700"
+                        >
+                          Clear Selection
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
         </main>
