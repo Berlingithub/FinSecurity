@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign } from "lucide-react";
+import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { Security } from "@shared/schema";
@@ -18,16 +20,63 @@ type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc';
 export default function InvestorDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
+  const queryClient = useQueryClient();
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [sortOption, setSortOption] = useState<SortOption>('amount-desc');
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   // Fetch marketplace securities
   const { data: securities = [], isLoading: securitiesLoading } = useQuery<Security[]>({
     queryKey: ["/api/marketplace/securities"],
     enabled: !!user && user.role === "investor",
     retry: false,
+  });
+
+  // Fetch purchased securities
+  const { data: purchasedSecurities = [], isLoading: purchasedLoading } = useQuery<Security[]>({
+    queryKey: ["/api/investor/securities"],
+    enabled: !!user && user.role === "investor",
+    retry: false,
+  });
+
+  // Purchase mutation
+  const purchaseMutation = useMutation({
+    mutationFn: async (securityId: string) => {
+      return await apiRequest(`/api/securities/${securityId}/purchase`, {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Purchase Successful",
+        description: "You have successfully purchased the security!",
+      });
+      setIsPurchaseModalOpen(false);
+      setSelectedSecurity(null);
+      // Invalidate both marketplace and purchased securities
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/securities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/investor/securities"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Purchase Failed",
+        description: error.message || "Failed to purchase security. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   // Redirect if not authenticated or not an investor
@@ -62,6 +111,17 @@ export default function InvestorDashboard() {
     setIsDetailsModalOpen(true);
   };
 
+  const handlePurchaseClick = (security: Security) => {
+    setSelectedSecurity(security);
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handleConfirmPurchase = () => {
+    if (selectedSecurity) {
+      purchaseMutation.mutate(selectedSecurity.id);
+    }
+  };
+
   // Filter and sort securities
   const filteredAndSortedSecurities = securities
     .filter(security => currencyFilter === 'all' || security.currency === currencyFilter)
@@ -88,6 +148,10 @@ export default function InvestorDashboard() {
   const averageReturn = securities.length > 0 
     ? securities.reduce((sum, s) => sum + (parseFloat(s.expectedReturn || '0')), 0) / securities.length 
     : 0;
+  
+  // Calculate purchased securities stats
+  const totalPurchasedValue = purchasedSecurities.reduce((sum, s) => sum + parseFloat(s.totalValue), 0);
+  const purchasedCount = purchasedSecurities.length;
 
   if (isLoading) {
     return (
@@ -141,15 +205,15 @@ export default function InvestorDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Average Return</p>
-                  <p className="text-2xl font-bold text-gray-900">{averageReturn.toFixed(1)}%</p>
+                  <p className="text-sm font-medium text-gray-600">My Investments</p>
+                  <p className="text-2xl font-bold text-gray-900">${totalPurchasedValue.toLocaleString()}</p>
                 </div>
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-600">Expected annual return</span>
+                <span className="text-gray-600">{purchasedCount} securities owned</span>
               </div>
             </CardContent>
           </Card>
@@ -175,27 +239,38 @@ export default function InvestorDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Currency Options</p>
-                  <p className="text-2xl font-bold text-gray-900">{availableCurrencies.length}</p>
+                  <p className="text-sm font-medium text-gray-600">Average Return</p>
+                  <p className="text-2xl font-bold text-gray-900">{averageReturn.toFixed(1)}%</p>
                 </div>
                 <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-yellow-600" />
+                  <TrendingUp className="w-5 h-5 text-yellow-600" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-600">{availableCurrencies.join(', ')}</span>
+                <span className="text-gray-600">Expected annual return</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Marketplace */}
+        {/* Marketplace and Investments Tabs */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Securities Marketplace</CardTitle>
+              <Tabs defaultValue="marketplace" className="w-full">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
+                      <TabsTrigger value="purchased">My Securities</TabsTrigger>
+                    </TabsList>
+                  </div>
+                </CardHeader>
+                
+                <TabsContent value="marketplace" className="mt-0">
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg font-semibold text-gray-900">Available Securities</CardTitle>
                   <div className="flex items-center space-x-4">
                     {/* Currency Filter */}
                     <div className="flex items-center space-x-2">
@@ -290,6 +365,15 @@ export default function InvestorDashboard() {
                           <Eye className="w-4 h-4 mr-1" />
                           Details
                         </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handlePurchaseClick(security)}
+                          className="ml-2 bg-primary-500 hover:bg-primary-600 text-white"
+                          disabled={purchaseMutation.isPending}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-1" />
+                          Purchase
+                        </Button>
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
                         <span>Listed: {format(new Date(security.listedAt || security.createdAt || new Date()), "MMM dd, yyyy")}</span>
@@ -298,7 +382,83 @@ export default function InvestorDashboard() {
                     </div>
                   ))
                 )}
-              </CardContent>
+                  </CardContent>
+                </TabsContent>
+
+                <TabsContent value="purchased" className="mt-0">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900">My Purchased Securities</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {purchasedLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                      </div>
+                    ) : purchasedSecurities.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Securities Purchased</h3>
+                        <p className="text-sm text-gray-500">Browse the marketplace to find investment opportunities</p>
+                      </div>
+                    ) : (
+                      purchasedSecurities.map((security) => (
+                        <div key={security.id} className="border border-gray-200 rounded-lg p-4 bg-green-50 border-green-200">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h4 className="font-semibold text-gray-900">{security.title}</h4>
+                                <Badge variant="outline">ID: {security.id.slice(0, 8)}</Badge>
+                                <Badge variant="default" className="bg-green-600">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Purchased
+                                </Badge>
+                                {security.riskGrade && (
+                                  <Badge variant={
+                                    security.riskGrade.startsWith('A') ? 'default' :
+                                    security.riskGrade.startsWith('B') ? 'secondary' : 'destructive'
+                                  }>
+                                    {security.riskGrade}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div className="flex items-center">
+                                  <DollarSign className="w-4 h-4 text-gray-400 mr-1" />
+                                  <span className="font-medium">{security.currency} {parseFloat(security.totalValue).toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                                  <span>{security.expectedReturn ? `${security.expectedReturn}%` : 'N/A'} return</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Calendar className="w-4 h-4 text-blue-500 mr-1" />
+                                  <span>{security.duration}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Clock className="w-4 h-4 text-purple-500 mr-1" />
+                                  <span>Purchased: {format(new Date(security.purchasedAt || security.createdAt || new Date()), "MMM dd")}</span>
+                                </div>
+                              </div>
+                              {security.description && (
+                                <p className="text-sm text-gray-600 mt-2 line-clamp-2">{security.description}</p>
+                              )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(security)}
+                              className="ml-4 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Details
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </TabsContent>
+              </Tabs>
             </Card>
           </div>
 
@@ -446,6 +606,75 @@ export default function InvestorDashboard() {
                   </Button>
                   <Button className="bg-primary-500 hover:bg-primary-600">
                     Invest Now
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Purchase Confirmation Modal */}
+        <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Confirm Purchase</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to purchase this security?
+              </DialogDescription>
+            </DialogHeader>
+            {selectedSecurity && (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">{selectedSecurity.title}</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Investment Amount:</span>
+                      <p className="font-medium">{selectedSecurity.currency} {parseFloat(selectedSecurity.totalValue).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Expected Return:</span>
+                      <p className="font-medium text-green-600">{selectedSecurity.expectedReturn ? `${selectedSecurity.expectedReturn}%` : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Duration:</span>
+                      <p className="font-medium">{selectedSecurity.duration}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Risk Grade:</span>
+                      <Badge variant={
+                        selectedSecurity.riskGrade?.startsWith('A') ? 'default' :
+                        selectedSecurity.riskGrade?.startsWith('B') ? 'secondary' : 'destructive'
+                      }>
+                        {selectedSecurity.riskGrade || 'Not Rated'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsPurchaseModalOpen(false)}
+                    disabled={purchaseMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleConfirmPurchase}
+                    disabled={purchaseMutation.isPending}
+                    className="bg-primary-500 hover:bg-primary-600"
+                  >
+                    {purchaseMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Confirm Purchase
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

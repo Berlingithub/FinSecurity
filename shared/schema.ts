@@ -77,8 +77,10 @@ export const securities = pgTable("securities", {
   expectedReturn: decimal("expected_return", { precision: 5, scale: 2 }), // percentage
   riskGrade: varchar("risk_grade", { enum: ["A", "A-", "B+", "B", "B-", "C+", "C", "C-"] }),
   duration: varchar("duration").notNull(), // e.g., "90 days", "6 months"
-  status: varchar("status", { enum: ["securitized", "listed", "funded", "completed"] }).notNull().default("securitized"),
+  status: varchar("status", { enum: ["securitized", "listed", "purchased", "funded", "completed"] }).notNull().default("securitized"),
   listedAt: timestamp("listed_at"),
+  purchasedBy: varchar("purchased_by").references(() => users.id),
+  purchasedAt: timestamp("purchased_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -87,6 +89,7 @@ export const securities = pgTable("securities", {
 export const usersRelations = relations(users, ({ many }) => ({
   receivables: many(receivables),
   securities: many(securities),
+  purchasedSecurities: many(securities, { relationName: "purchased" }),
 }));
 
 export const receivablesRelations = relations(receivables, ({ one, many }) => ({
@@ -104,6 +107,10 @@ export const securitiesRelations = relations(securities, ({ one }) => ({
   }),
   merchant: one(users, {
     fields: [securities.merchantId],
+    references: [users.id],
+  }),
+  purchaser: one(users, {
+    fields: [securities.purchasedBy],
     references: [users.id],
   }),
 }));

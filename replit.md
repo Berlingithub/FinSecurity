@@ -21,7 +21,7 @@ SecureReceivables is a full-stack web application for receivables securitization
 ### Securitization and Marketplace Integration
 - Implemented complete securitization workflow for trade receivables
 - Added securities database table with comprehensive financial metadata
-- Enhanced receivables status tracking (draft → active → securitized → listed)
+- Enhanced receivables status tracking (draft → active → securitized → listed → purchased/sold)
 - Built securitization form with investment-specific fields:
   - Security title and description for investor visibility
   - Risk grading system (A to C- ratings)
@@ -32,6 +32,23 @@ SecureReceivables is a full-stack web application for receivables securitization
 - Real-time dashboard statistics including listed securities count
 - Public marketplace API endpoint for investor access
 - Comprehensive error handling and loading states throughout workflow
+
+### Investor Security Purchase System
+- Added comprehensive purchase functionality for listed securities
+- Enhanced securities schema with purchase tracking fields:
+  - purchasedBy field linking to investor ID
+  - purchasedAt timestamp for transaction recording
+  - Updated status enum to include "purchased" state
+- Built secure purchase API endpoints with role-based authorization
+- Implemented purchase confirmation modal with detailed security information
+- Added "My Purchased Securities" tab on investor dashboard showing owned investments
+- Purchase process automatically:
+  - Updates security status from "listed" to "purchased"
+  - Removes securities from public marketplace to prevent double-purchasing
+  - Updates related receivable status to "sold"
+  - Records investor ID and purchase timestamp
+- Real-time dashboard statistics reflecting both marketplace and purchased securities
+- Enhanced error handling for purchase conflicts and authorization
 
 ## User Preferences
 

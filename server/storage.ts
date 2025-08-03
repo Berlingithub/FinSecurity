@@ -145,6 +145,33 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(securities.listedAt));
   }
 
+  async getPurchasedSecurities(investorId: string): Promise<Security[]> {
+    return await db
+      .select()
+      .from(securities)
+      .where(eq(securities.purchasedBy, investorId))
+      .orderBy(desc(securities.purchasedAt));
+  }
+
+  async purchaseSecurity(securityId: string, investorId: string): Promise<Security> {
+    const [security] = await db
+      .update(securities)
+      .set({
+        status: "purchased",
+        purchasedBy: investorId,
+        purchasedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(securities.id, securityId), eq(securities.status, "listed")))
+      .returning();
+    
+    if (!security) {
+      throw new Error("Security not found or already purchased");
+    }
+    
+    return security;
+  }
+
   async getSecurity(id: string): Promise<Security | undefined> {
     const [security] = await db
       .select()

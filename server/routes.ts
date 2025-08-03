@@ -271,6 +271,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Investor routes
+  app.post('/api/securities/:id/purchase', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'investor') {
+        return res.status(403).json({ message: "Only investors can purchase securities" });
+      }
+
+      const security = await storage.purchaseSecurity(id, userId);
+      
+      // Update related receivable status to sold
+      await storage.updateReceivable(security.receivableId, { status: "sold" });
+
+      res.json(security);
+    } catch (error) {
+      console.error("Error purchasing security:", error);
+      if (error.message === "Security not found or already purchased") {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Failed to purchase security" });
+      }
+    }
+  });
+
+  app.get('/api/investor/securities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'investor') {
+        return res.status(403).json({ message: "Only investors can access purchased securities" });
+      }
+
+      const securities = await storage.getPurchasedSecurities(userId);
+      res.json(securities);
+    } catch (error) {
+      console.error("Error fetching purchased securities:", error);
+      res.status(500).json({ message: "Failed to fetch purchased securities" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
