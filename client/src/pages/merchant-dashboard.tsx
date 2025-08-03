@@ -18,6 +18,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { createReceivableSchema, createSecuritySchema, type CreateReceivable, type CreateSecurity, type Receivable, type Security } from "@shared/schema";
 import { format } from "date-fns";
 import Header from "@/components/Header";
+import NotificationCenter from "@/components/NotificationCenter";
 
 export default function MerchantDashboard() {
   const { toast } = useToast();
@@ -370,6 +371,7 @@ export default function MerchantDashboard() {
             <p className="text-gray-600 mt-1">Welcome back! Ready to securitize your receivables?</p>
           </div>
           <div className="flex items-center space-x-4">
+            <NotificationCenter />
             <Button 
               variant="outline"
               onClick={() => window.location.href = "/profile"}

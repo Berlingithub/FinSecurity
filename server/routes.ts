@@ -253,6 +253,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update receivable status to listed
       await storage.updateReceivable(existingSecurity.receivableId, { status: "listed" });
 
+      // Note: In a production system, you might want to notify investors about new listings
+      // For now, we'll focus on notifications for direct user actions
+      
       res.json(security);
     } catch (error) {
       console.error("Error listing security:", error);
@@ -286,6 +289,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update related receivable status to sold
       await storage.updateReceivable(security.receivableId, { status: "sold" });
+
+      // Create notification for merchant
+      await storage.createNotification({
+        userId: security.merchantId,
+        type: "security_purchased",
+        title: "Security Purchased!",
+        message: `Your security "${security.title}" has been purchased by an investor.`,
+        data: {
+          securityId: security.id,
+          securityTitle: security.title,
+          amount: security.totalValue,
+        },
+        read: false,
+      });
 
       res.json(security);
     } catch (error) {
@@ -345,7 +362,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           existingSecurity.purchasedBy, 
           parseFloat(existingSecurity.totalValue)
         );
+
+        // Create notification for investor about payment received
+        await storage.createNotification({
+          userId: existingSecurity.purchasedBy,
+          type: "payment_received",
+          title: "Payment Received!",
+          message: `Payment of $${parseFloat(existingSecurity.totalValue).toLocaleString()} has been received for security "${existingSecurity.title}".`,
+          data: {
+            securityId: existingSecurity.id,
+            securityTitle: existingSecurity.title,
+            amount: existingSecurity.totalValue,
+          },
+          read: false,
+        });
       }
+
+      // Create confirmation notification for merchant
+      await storage.createNotification({
+        userId: userId,
+        type: "payment_received",
+        title: "Payment Processed",
+        message: `You have successfully marked security "${existingSecurity.title}" as paid.`,
+        data: {
+          securityId: existingSecurity.id,
+          securityTitle: existingSecurity.title,
+          amount: existingSecurity.totalValue,
+        },
+        read: false,
+      });
 
       res.json(paidSecurity);
     } catch (error) {
@@ -373,6 +418,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Notification routes
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const notifications = await storage.getUserNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.delete('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteNotification(id);
+      res.json({ message: "Notification deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
+  app.delete('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.clearAllNotifications(userId);
+      res.json({ message: "All notifications cleared successfully" });
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+      res.status(500).json({ message: "Failed to clear notifications" });
     }
   });
 

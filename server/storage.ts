@@ -2,6 +2,7 @@ import {
   users,
   receivables,
   securities,
+  notifications,
   type User,
   type UpsertUser,
   type RegisterUser,
@@ -9,6 +10,8 @@ import {
   type InsertReceivable,
   type Security,
   type InsertSecurity,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -35,6 +38,12 @@ export interface IStorage {
   getSecurity(id: string): Promise<Security | undefined>;
   updateSecurity(id: string, security: Partial<InsertSecurity>): Promise<Security>;
   listSecurity(id: string): Promise<Security>;
+  // Notification operations
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getUserNotifications(userId: string): Promise<Notification[]>;
+  markNotificationAsRead(id: string): Promise<Notification>;
+  deleteNotification(id: string): Promise<void>;
+  clearAllNotifications(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -247,6 +256,40 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  // Notification methods
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [createdNotification] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    return createdNotification;
+  }
+
+  async getUserNotifications(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    await db.delete(notifications).where(eq(notifications.id, id));
+  }
+
+  async clearAllNotifications(userId: string): Promise<void> {
+    await db.delete(notifications).where(eq(notifications.userId, userId));
   }
 }
 

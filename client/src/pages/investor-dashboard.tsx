@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import type { Security } from "@shared/schema";
 import Header from "@/components/Header";
+import NotificationCenter from "@/components/NotificationCenter";
 
 type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc';
 
@@ -211,6 +212,7 @@ export default function InvestorDashboard() {
             <p className="text-gray-600 mt-1">Welcome back! Explore new investment opportunities.</p>
           </div>
           <div className="flex items-center space-x-4">
+            <NotificationCenter />
             <Button 
               variant="outline"
               onClick={() => window.location.href = "/profile"}
