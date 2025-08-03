@@ -6,6 +6,30 @@ SecureReceivables is a full-stack web application for receivables securitization
 
 ## Recent Changes (August 2025)
 
+### Dynamic Filter Counts & Refined Interactive Multi-Select Filters (August 2025)
+- Implemented comprehensive multi-select filtering system for advanced investment discovery:
+  - Replaced single-select dropdowns with multi-select filter buttons for categories, risk levels, and currencies
+  - Added dynamic real-time item counts next to each filter option (e.g., "Manufacturing (12)", "Low Risk (5)")
+  - Filter counts automatically update based on current filter combinations for accurate availability
+  - Enhanced visual indicators showing selected vs unselected states with blue highlighting
+- Applied filters summary section with removable filter tags:
+  - Displays active filters as removable badges (e.g., "Filtered by: Manufacturing, Low Risk")
+  - Individual 'x' buttons on each filter tag for easy removal
+  - "Clear All" button to reset all filters at once
+  - Real-time filter persistence across navigation and interactions
+- Advanced multi-select functionality:
+  - Investors can select multiple categories simultaneously (Manufacturing + Technology + Healthcare)
+  - Multi-risk level selection (Low + Medium risk securities)
+  - Multi-currency filtering for international diversification
+  - Instant updates without page reload for smooth browsing experience
+- Enhanced sidebar navigation with multi-select support:
+  - Category and risk level buttons with checkbox-style multi-selection
+  - Dynamic counts showing available securities for each option
+  - Active highlighting and chevron indicators for selected filters
+  - Persistent filter state across mobile and desktop interfaces
+- Complete e-commerce-style filtering experience mimicking major platforms like Amazon
+- Seamless integration with existing search, sorting, and watchlist functionality
+
 ### E-Commerce Watchlist/Shopping Cart Feature (August 2025)
 - Implemented complete shopping cart-style functionality for investors:
   - Replaced direct "Purchase" buttons with "Add to Cart" buttons on security cards
