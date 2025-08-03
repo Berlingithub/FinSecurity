@@ -166,8 +166,11 @@ export class DatabaseStorage implements IStorage {
         totalValue: securities.totalValue,
         currency: securities.currency,
         expectedReturn: securities.expectedReturn,
+        yieldRate: securities.yieldRate,
         riskGrade: securities.riskGrade,
         duration: securities.duration,
+        viewCount: securities.viewCount,
+        watchlistCount: securities.watchlistCount,
         status: securities.status,
         listedAt: securities.listedAt,
         purchasedBy: securities.purchasedBy,
@@ -218,12 +221,44 @@ export class DatabaseStorage implements IStorage {
     return security;
   }
 
-  async getSecurity(id: string): Promise<Security | undefined> {
-    const [security] = await db
-      .select()
+  async getSecurity(id: string): Promise<any | undefined> {
+    const [result] = await db
+      .select({
+        id: securities.id,
+        receivableId: securities.receivableId,
+        merchantId: securities.merchantId,
+        title: securities.title,
+        description: securities.description,
+        totalValue: securities.totalValue,
+        currency: securities.currency,
+        expectedReturn: securities.expectedReturn,
+        yieldRate: securities.yieldRate,
+        riskGrade: securities.riskGrade,
+        duration: securities.duration,
+        viewCount: securities.viewCount,
+        watchlistCount: securities.watchlistCount,
+        status: securities.status,
+        listedAt: securities.listedAt,
+        purchasedBy: securities.purchasedBy,
+        purchasedAt: securities.purchasedAt,
+        paidAt: securities.paidAt,
+        createdAt: securities.createdAt,
+        updatedAt: securities.updatedAt,
+        // Include receivable details
+        debtorName: receivables.debtorName,
+        receivableDueDate: receivables.dueDate,
+        category: receivables.category,
+        riskLevel: receivables.riskLevel,
+        // Include merchant details
+        merchantName: users.firstName,
+        merchantLastName: users.lastName,
+      })
       .from(securities)
+      .leftJoin(receivables, eq(securities.receivableId, receivables.id))
+      .leftJoin(users, eq(securities.merchantId, users.id))
       .where(eq(securities.id, id));
-    return security;
+    
+    return result;
   }
 
   async updateSecurity(id: string, securityData: Partial<InsertSecurity>): Promise<Security> {

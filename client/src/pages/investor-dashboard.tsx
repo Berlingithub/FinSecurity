@@ -144,7 +144,7 @@ export default function InvestorDashboard() {
     mutationFn: async () => {
       return await apiRequest("POST", "/api/watchlist/purchase");
     },
-    onSuccess: (purchasedSecurities) => {
+    onSuccess: (purchasedSecurities: any[]) => {
       toast({
         title: "Batch Purchase Successful",
         description: `Successfully purchased ${purchasedSecurities.length} securities`,
@@ -174,7 +174,7 @@ export default function InvestorDashboard() {
   }, 0);
 
   // Badge logic functions
-  const isNewListing = (security: Security) => {
+  const isNewListing = (security: any) => {
     if (!security.listedAt) return false;
     const listedDate = new Date(security.listedAt);
     const now = new Date();
@@ -182,23 +182,23 @@ export default function InvestorDashboard() {
     return diffHours <= 24;
   };
 
-  const isHighYield = (security: Security) => {
+  const isHighYield = (security: any) => {
     return security.yieldRate && parseFloat(security.yieldRate) > 10.0;
   };
 
-  const isLowRisk = (security: Security) => {
+  const isLowRisk = (security: any) => {
     return security.riskLevel === 'Low';
   };
 
-  const isPopular = (security: Security) => {
+  const isPopular = (security: any) => {
     // Get top 5 securities by combined view count and watchlist count
     const popularityScore = (security.viewCount || 0) + (security.watchlistCount || 0) * 2;
-    const allScores = securities.map(s => (s.viewCount || 0) + (s.watchlistCount || 0) * 2);
+    const allScores = securities.map((s: any) => (s.viewCount || 0) + (s.watchlistCount || 0) * 2);
     const sortedScores = [...allScores].sort((a, b) => b - a);
     return sortedScores.slice(0, 5).includes(popularityScore);
   };
 
-  const getBadges = (security: Security) => {
+  const getBadges = (security: any) => {
     const badges = [];
     if (isNewListing(security)) badges.push({ type: 'new', label: 'New Listing', color: 'bg-green-500' });
     if (isHighYield(security)) badges.push({ type: 'yield', label: 'High Yield', color: 'bg-yellow-500' });
@@ -298,18 +298,18 @@ export default function InvestorDashboard() {
         const matchesSearch = 
           security.title?.toLowerCase().includes(query) ||
           security.description?.toLowerCase().includes(query) ||
-          security.debtorName?.toLowerCase().includes(query) ||
-          security.merchantName?.toLowerCase().includes(query);
+          (security as any).debtorName?.toLowerCase().includes(query) ||
+          (security as any).merchantName?.toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
 
       // Category filter
-      if (categoryFilter !== 'all' && security.category !== categoryFilter) {
+      if (categoryFilter !== 'all' && (security as any).category !== categoryFilter) {
         return false;
       }
 
       // Risk level filter
-      if (riskFilter !== 'all' && security.riskLevel !== riskFilter) {
+      if (riskFilter !== 'all' && (security as any).riskLevel !== riskFilter) {
         return false;
       }
 
@@ -336,7 +336,7 @@ export default function InvestorDashboard() {
           return parseFloat(b.yieldRate || '0') - parseFloat(a.yieldRate || '0');
         case 'risk-asc':
           const riskOrder = { 'Low': 1, 'Medium': 2, 'High': 3 };
-          return (riskOrder[a.riskLevel as keyof typeof riskOrder] || 2) - (riskOrder[b.riskLevel as keyof typeof riskOrder] || 2);
+          return (riskOrder[(a as any).riskLevel as keyof typeof riskOrder] || 2) - (riskOrder[(b as any).riskLevel as keyof typeof riskOrder] || 2);
         case 'popular':
           const aScore = (a.viewCount || 0) + (a.watchlistCount || 0) * 2;
           const bScore = (b.viewCount || 0) + (b.watchlistCount || 0) * 2;
@@ -348,8 +348,8 @@ export default function InvestorDashboard() {
 
   // Get unique values for filters
   const availableCurrencies = Array.from(new Set(securities.map(s => s.currency)));
-  const availableCategories = Array.from(new Set(securities.map(s => s.category).filter(Boolean)));
-  const availableRiskLevels = Array.from(new Set(securities.map(s => s.riskLevel).filter(Boolean)));
+  const availableCategories = Array.from(new Set(securities.map((s: any) => s.category).filter(Boolean)));
+  const availableRiskLevels = Array.from(new Set(securities.map((s: any) => s.riskLevel).filter(Boolean)));
 
   // Calculate portfolio stats
   const totalInvestmentValue = securities.reduce((sum, s) => sum + parseFloat(s.totalValue), 0);
