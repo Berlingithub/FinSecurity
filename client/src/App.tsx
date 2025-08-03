@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import Register from "@/pages/register";
 import MerchantDashboard from "@/pages/merchant-dashboard";
 import InvestorDashboard from "@/pages/investor-dashboard";
+import SecurityDetail from "@/pages/security-detail";
 import Profile from "@/pages/profile";
 
 function Router() {
@@ -44,6 +45,8 @@ function Router() {
             <>
               <Route path="/" component={InvestorDashboard} />
               <Route path="/dashboard" component={InvestorDashboard} />
+              <Route path="/investor-dashboard" component={InvestorDashboard} />
+              <Route path="/security/:id" component={SecurityDetail} />
               <Route path="/profile" component={Profile} />
             </>
           ) : (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings, X, Tag, Target, Factory, Store, Computer, Wrench, Heart, Banknote, Hammer, Wheat, Trash2, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc';
 export default function InvestorDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -852,10 +854,7 @@ export default function InvestorDashboard() {
                           <div className="grid grid-cols-2 gap-3">
                             <Button
                               variant="outline"
-                              onClick={() => {
-                                setSelectedSecurity(security);
-                                setIsDetailsModalOpen(true);
-                              }}
+                              onClick={() => setLocation(`/security/${security.id}`)}
                               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-300 transition-all duration-200"
                             >
                               <Eye className="w-4 h-4 mr-2" />

@@ -274,6 +274,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual security details
+  app.get('/api/security/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const security = await storage.getSecurity(id);
+      
+      if (!security) {
+        return res.status(404).json({ message: "Security not found" });
+      }
+
+      // Only return listed securities for public access
+      if (security.status !== "listed") {
+        return res.status(404).json({ message: "Security not available" });
+      }
+
+      res.json(security);
+    } catch (error) {
+      console.error("Error fetching security details:", error);
+      res.status(500).json({ message: "Failed to fetch security details" });
+    }
+  });
+
   // Investor routes
   app.post('/api/securities/:id/purchase', isAuthenticated, async (req: any, res) => {
     try {
