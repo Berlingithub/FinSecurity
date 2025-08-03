@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import type { Security } from "@shared/schema";
 import Header from "@/components/Header";
 import NotificationCenter from "@/components/NotificationCenter";
+import EmptyState from "@/components/EmptyState";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import SkeletonCard from "@/components/SkeletonCard";
 
 type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc';
 
@@ -373,18 +376,25 @@ export default function InvestorDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {securitiesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <SkeletonCard key={i} lines={4} className="animate-fade-in" />
+                    ))}
                   </div>
                 ) : filteredMarketplace.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Securities Available</h3>
-                    <p className="text-sm text-gray-500">Check back later for new investment opportunities</p>
-                  </div>
+                  <EmptyState
+                    icon={Shield}
+                    title="No Securities Available"
+                    description="There are no securities available for purchase at the moment. Check back later for new investment opportunities or adjust your filters."
+                    actionLabel="Clear Filters"
+                    onAction={() => {
+                      setCurrencyFilter("all");
+                      setMarketplaceStatusFilter("all");
+                    }}
+                  />
                 ) : (
                   filteredMarketplace.map((security: Security) => (
-                    <div key={security.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
+                    <div key={security.id} className="border border-gray-200 rounded-lg p-4 card-hover animate-slide-up">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">

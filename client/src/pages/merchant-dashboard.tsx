@@ -19,6 +19,9 @@ import { createReceivableSchema, createSecuritySchema, type CreateReceivable, ty
 import { format } from "date-fns";
 import Header from "@/components/Header";
 import NotificationCenter from "@/components/NotificationCenter";
+import EmptyState from "@/components/EmptyState";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import SkeletonCard from "@/components/SkeletonCard";
 
 export default function MerchantDashboard() {
   const { toast } = useToast();
@@ -32,7 +35,16 @@ export default function MerchantDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const form = useForm<CreateReceivable>({
-    resolver: zodResolver(createReceivableSchema),
+    resolver: zodResolver(createReceivableSchema.extend({
+      amount: createReceivableSchema.shape.amount.refine(
+        (val) => parseFloat(val) > 0,
+        { message: "Amount must be greater than 0" }
+      ),
+      dueDate: createReceivableSchema.shape.dueDate.refine(
+        (val) => new Date(val) > new Date(),
+        { message: "Due date must be in the future" }
+      ),
+    })),
     defaultValues: {
       debtorName: "",
       amount: "",
@@ -40,10 +52,24 @@ export default function MerchantDashboard() {
       dueDate: "",
       description: "",
     },
+    mode: "onChange", // Enable real-time validation
   });
 
   const securitizeForm = useForm<CreateSecurity>({
-    resolver: zodResolver(createSecuritySchema),
+    resolver: zodResolver(createSecuritySchema.extend({
+      totalValue: createSecuritySchema.shape.totalValue.refine(
+        (val) => parseFloat(val) > 0,
+        { message: "Total value must be greater than 0" }
+      ),
+      expectedReturn: createSecuritySchema.shape.expectedReturn?.refine(
+        (val) => !val || (parseFloat(val) >= 0 && parseFloat(val) <= 100),
+        { message: "Expected return must be between 0% and 100%" }
+      ),
+      duration: createSecuritySchema.shape.duration.refine(
+        (val) => parseInt(val) > 0,
+        { message: "Duration must be greater than 0 days" }
+      ),
+    })),
     defaultValues: {
       title: "",
       description: "",
@@ -52,6 +78,7 @@ export default function MerchantDashboard() {
       riskGrade: "B",
       duration: "",
     },
+    mode: "onChange",
   });
 
   // Fetch receivables
@@ -742,19 +769,22 @@ export default function MerchantDashboard() {
               </Dialog>
               <CardContent>
                 {receivablesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <SkeletonCard key={i} lines={2} className="animate-fade-in" />
+                    ))}
                   </div>
                 ) : filteredReceivables.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">
-                      {statusFilter === "all" ? "No receivables yet" : `No receivables found with status: ${statusFilter}`}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {statusFilter === "all" ? "Add your first receivable to get started" : "Try changing the filter to see more results"}
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={Receipt}
+                    title={statusFilter === "all" ? "No receivables yet" : "No receivables found"}
+                    description={statusFilter === "all" 
+                      ? "Create your first receivable to start securitizing and managing your trade finances."
+                      : `No receivables match the '${statusFilter}' status. Try adjusting your filter or create a new receivable.`
+                    }
+                    actionLabel={statusFilter === "all" ? "Add Your First Receivable" : "Clear Filter"}
+                    onAction={() => statusFilter === "all" ? setIsAddModalOpen(true) : setStatusFilter("all")}
+                  />
                 ) : (
                   <div className="space-y-3">
                     {filteredReceivables.map((receivable) => {
@@ -764,7 +794,7 @@ export default function MerchantDashboard() {
                       const isListed = receivable.status === "listed";
                       
                       return (
-                        <div key={receivable.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
+                        <div key={receivable.id} className="border border-gray-200 rounded-lg p-4 card-hover animate-slide-up">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -797,7 +827,7 @@ export default function MerchantDashboard() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleSecuritize(receivable)}
-                                  className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                                  className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 btn-hover"
                                 >
                                   <Lock className="w-4 h-4 mr-1" />
                                   Securitize
@@ -810,10 +840,11 @@ export default function MerchantDashboard() {
                                   size="sm"
                                   onClick={() => handleListSecurity(security.id)}
                                   disabled={listSecurityMutation.isPending}
-                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  className={`text-green-600 hover:text-green-700 hover:bg-green-50 btn-hover ${listSecurityMutation.isPending ? 'btn-loading' : ''}`}
                                 >
-                                  <TrendingUp className="w-4 h-4 mr-1" />
-                                  List for Sale
+                                  {listSecurityMutation.isPending && <LoadingSpinner size="sm" className="mr-1" />}
+                                  {!listSecurityMutation.isPending && <TrendingUp className="w-4 h-4 mr-1" />}
+                                  {listSecurityMutation.isPending ? "Listing..." : "List for Sale"}
                                 </Button>
                               )}
                               
@@ -844,7 +875,7 @@ export default function MerchantDashboard() {
                                     size="sm"
                                     onClick={() => markAsPaidMutation.mutate(security.id)}
                                     disabled={markAsPaidMutation.isPending}
-                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    className={`text-green-600 hover:text-green-700 hover:bg-green-50 btn-hover ${markAsPaidMutation.isPending ? 'btn-loading' : ''}`}
                                   >
                                     <DollarSign className="w-4 h-4 mr-1" />
                                     {markAsPaidMutation.isPending ? "Processing..." : "Mark as Paid"}
