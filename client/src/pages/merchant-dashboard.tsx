@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit, Lock, TrendingUp } from "lucide-react";
+import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit, Lock, TrendingUp, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,7 +25,9 @@ export default function MerchantDashboard() {
   const queryClient = useQueryClient();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSecuritizeModalOpen, setIsSecuritizeModalOpen] = useState(false);
+  const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
   const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
+  const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
 
   const form = useForm<CreateReceivable>({
     resolver: zodResolver(createReceivableSchema),
@@ -225,6 +227,11 @@ export default function MerchantDashboard() {
     securitizeForm.setValue("totalValue", receivable.amount);
     securitizeForm.setValue("description", receivable.description || `Trade receivable from ${receivable.debtorName} due ${format(new Date(receivable.dueDate), "MMM dd, yyyy")}`);
     setIsSecuritizeModalOpen(true);
+  };
+
+  const handleViewAgreement = (security: Security) => {
+    setSelectedSecurity(security);
+    setIsAgreementModalOpen(true);
   };
 
   const handleListSecurity = (securityId: string) => {
@@ -552,7 +559,7 @@ export default function MerchantDashboard() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Risk Grade</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select risk grade" />
@@ -696,6 +703,24 @@ export default function MerchantDashboard() {
                                 </div>
                               )}
                               
+                              {security && security.status === "purchased" && (
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex items-center text-sm text-blue-600">
+                                    <Shield className="w-4 h-4 mr-1" />
+                                    Sold
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleViewAgreement(security)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <FileText className="w-4 h-4 mr-1" />
+                                    View Agreement
+                                  </Button>
+                                </div>
+                              )}
+                              
                               {(canSecuritize) && (
                                 <Button
                                   variant="ghost"
@@ -752,6 +777,126 @@ export default function MerchantDashboard() {
             </Card>
           </div>
         </div>
+
+        {/* Legal Agreement Modal */}
+        <Dialog open={isAgreementModalOpen} onOpenChange={setIsAgreementModalOpen}>
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                Legal Agreement Placeholder
+              </DialogTitle>
+              <DialogDescription>
+                This document represents a placeholder for a legally binding agreement
+              </DialogDescription>
+            </DialogHeader>
+            {selectedSecurity && (
+              <div className="space-y-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Shield className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-yellow-800">
+                        Legal Disclaimer
+                      </h3>
+                      <div className="mt-2 text-sm text-yellow-700">
+                        <p>This is a placeholder document for demonstration purposes only. In a real-world scenario, this would be a legally binding agreement drafted by qualified legal professionals.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-6 bg-white">
+                  <div className="text-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">TRADE RECEIVABLE SECURITY PURCHASE AGREEMENT</h2>
+                    <p className="text-sm text-gray-500 mt-2">[PLACEHOLDER DOCUMENT]</p>
+                  </div>
+
+                  <div className="space-y-4 text-sm text-gray-700 leading-relaxed">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">PARTIES TO THE AGREEMENT</h3>
+                      <p><strong>Merchant (Seller):</strong> {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : '[Merchant Name Placeholder]'}</p>
+                      <p><strong>Investor (Purchaser):</strong> [Investor Name Placeholder]</p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">SECURITY DETAILS</h3>
+                      <p><strong>Security ID:</strong> {selectedSecurity.id}</p>
+                      <p><strong>Security Title:</strong> {selectedSecurity.title}</p>
+                      <p><strong>Total Value:</strong> {selectedSecurity.currency} {parseFloat(selectedSecurity.totalValue).toLocaleString()}</p>
+                      <p><strong>Expected Return:</strong> {selectedSecurity.expectedReturn ? `${selectedSecurity.expectedReturn}%` : 'N/A'}</p>
+                      <p><strong>Duration:</strong> {selectedSecurity.duration}</p>
+                      <p><strong>Risk Grade:</strong> {selectedSecurity.riskGrade || 'Not Rated'}</p>
+                      <p><strong>Purchase Date:</strong> {format(new Date(selectedSecurity.purchasedAt || new Date()), "MMMM dd, yyyy")}</p>
+                      <p><strong>Status:</strong> Purchased</p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">AGREEMENT TERMS</h3>
+                      <p>This document represents a placeholder for a legally binding agreement between the above-mentioned parties for the purchase of Trade Receivable Security ID {selectedSecurity.id}.</p>
+                      
+                      <p className="mt-3">In a real-world scenario, this agreement would include:</p>
+                      <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                        <li>Detailed terms and conditions of the security purchase</li>
+                        <li>Rights and obligations of both parties</li>
+                        <li>Payment terms and settlement procedures</li>
+                        <li>Risk disclosure and investor protections</li>
+                        <li>Dispute resolution mechanisms</li>
+                        <li>Regulatory compliance requirements</li>
+                        <li>Legal enforceability provisions</li>
+                        <li>Transfer of receivable ownership rights</li>
+                        <li>Collection and payment processing procedures</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">MERCHANT OBLIGATIONS</h3>
+                      <p>As the merchant who securitized this receivable, the following obligations would typically apply:</p>
+                      <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
+                        <li>Warranty of receivable authenticity and validity</li>
+                        <li>Notification of debtor regarding ownership transfer</li>
+                        <li>Cooperation in collection activities if required</li>
+                        <li>Provision of all relevant documentation</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">LEGAL NOTICE</h3>
+                      <p className="text-red-600 font-medium">This is a demonstration placeholder only. Any actual legal agreement would require:</p>
+                      <ul className="list-disc list-inside ml-4 mt-2 space-y-1 text-red-600">
+                        <li>Professional legal review and drafting</li>
+                        <li>Compliance with applicable securities laws</li>
+                        <li>Proper notarization and witnessing</li>
+                        <li>Regulatory approval where required</li>
+                        <li>Due diligence verification</li>
+                      </ul>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-4 mt-6">
+                      <p className="text-xs text-gray-500 text-center">
+                        Document Generated: {format(new Date(), "MMMM dd, yyyy 'at' h:mm a")}<br/>
+                        Security Reference: {selectedSecurity.id}<br/>
+                        Platform: SecureReceivables Demo System<br/>
+                        Merchant View
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAgreementModalOpen(false)}
+                  >
+                    Close Agreement
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
