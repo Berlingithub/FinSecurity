@@ -638,43 +638,81 @@ export default function InvestorDashboard() {
                 ) : (
                   <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     {filteredAndSortedSecurities.map((security: Security) => (
-                      <div key={security.id} className="bg-white border border-gray-200 rounded-xl p-6 card-hover animate-slide-up shadow-sm hover:shadow-lg transition-all duration-300">
-                        {/* Header with Status and Risk Grade */}
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex items-center space-x-2">
-                            {(() => {
-                              const statusInfo = getStatusInfo(security.status);
-                              const StatusIcon = statusInfo.icon;
-                              return (
-                                <Badge variant={statusInfo.variant} className="flex items-center space-x-1">
-                                  <StatusIcon className="w-3 h-3" />
-                                  <span className="capitalize">{security.status.replace('_', ' ')}</span>
-                                </Badge>
-                              );
-                            })()}
+                      <div key={security.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        {/* Product Header with Status Badge */}
+                        <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-100">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center space-x-2">
+                              {(() => {
+                                const statusInfo = getStatusInfo(security.status);
+                                const StatusIcon = statusInfo.icon;
+                                return (
+                                  <Badge variant={statusInfo.variant} className="flex items-center space-x-1 shadow-sm">
+                                    <StatusIcon className="w-3 h-3" />
+                                    <span className="capitalize text-xs font-medium">{security.status.replace('_', ' ')}</span>
+                                  </Badge>
+                                );
+                              })()}
+                            </div>
+                            {security.riskGrade && (
+                              <Badge variant={
+                                security.riskGrade.startsWith('A') ? 'default' :
+                                security.riskGrade.startsWith('B') ? 'secondary' : 'destructive'
+                              } className="text-xs font-bold shadow-sm">
+                                {security.riskGrade}
+                              </Badge>
+                            )}
                           </div>
-                          {security.riskGrade && (
-                            <Badge variant={
-                              security.riskGrade.startsWith('A') ? 'default' :
-                              security.riskGrade.startsWith('B') ? 'secondary' : 'destructive'
-                            } className="text-xs font-semibold">
-                              {security.riskGrade}
-                            </Badge>
-                          )}
+                          
+                          {/* Category & Risk Level Indicators */}
+                          <div className="flex items-center space-x-3 mt-3">
+                            <div className="flex items-center">
+                              {(security as any).category === 'Manufacturing' && <Factory className="w-4 h-4 mr-1 text-blue-600" />}
+                              {(security as any).category === 'Retail' && <Store className="w-4 h-4 mr-1 text-purple-600" />}
+                              {(security as any).category === 'Technology' && <Computer className="w-4 h-4 mr-1 text-green-600" />}
+                              {(security as any).category === 'Services' && <Wrench className="w-4 h-4 mr-1 text-orange-600" />}
+                              {(security as any).category === 'Healthcare' && <Heart className="w-4 h-4 mr-1 text-red-600" />}
+                              {(security as any).category === 'Finance' && <Banknote className="w-4 h-4 mr-1 text-yellow-600" />}
+                              {(security as any).category === 'Construction' && <Hammer className="w-4 h-4 mr-1 text-gray-600" />}
+                              {(security as any).category === 'Agriculture' && <Wheat className="w-4 h-4 mr-1 text-green-700" />}
+                              <span className="text-xs font-medium text-gray-700">
+                                {(security as any).category || 'Services'}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className={`w-2 h-2 rounded-full mr-1 ${
+                                (security as any).riskLevel === 'Low' ? 'bg-green-500' :
+                                (security as any).riskLevel === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                (security as any).riskLevel === 'Low' ? 'text-green-700' :
+                                (security as any).riskLevel === 'Medium' ? 'text-yellow-700' : 'text-red-700'
+                              }`}>
+                                {(security as any).riskLevel || 'Medium'} Risk
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Amount - Most Prominent */}
-                        <div className="text-center mb-4">
-                          <div className="text-3xl font-bold text-gray-900 mb-1">
-                            {security.currency} {parseFloat(security.totalValue).toLocaleString()}
+                        {/* Product Content */}
+                        <div className="p-6">
+                          {/* Amount - Hero Price Display */}
+                          <div className="text-center mb-6 py-4 bg-gray-50 rounded-xl">
+                            <div className="text-4xl font-bold text-gray-900 mb-1">
+                              {security.currency} {parseFloat(security.totalValue).toLocaleString()}
+                            </div>
+                            <div className="text-sm text-gray-500 font-medium">Investment Amount</div>
+                            {security.expectedReturn && (
+                              <div className="mt-2 text-lg font-semibold text-green-600">
+                                {security.expectedReturn}% Expected Return
+                              </div>
+                            )}
                           </div>
-                          <div className="text-sm text-gray-500">Investment Amount</div>
-                        </div>
 
-                        {/* Security Title */}
-                        <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 min-h-[3.5rem]">
-                          {security.title}
-                        </h3>
+                          {/* Security Title */}
+                          <h3 className="text-xl font-bold text-gray-900 mb-4 line-clamp-2 min-h-[3.5rem] group-hover:text-blue-600 transition-colors">
+                            {security.title}
+                          </h3>
 
                         {/* Key Details Grid */}
                         <div className="space-y-3 mb-4">
@@ -784,59 +822,60 @@ export default function InvestorDashboard() {
                           Listed: {format(new Date(security.listedAt || security.createdAt || new Date()), "MMM dd, yyyy")}
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedSecurity(security);
-                              setIsDetailsModalOpen(true);
-                            }}
-                            className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 border-primary-200 hover:border-primary-300"
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-                          
-                          {isInWatchlist(security.id) ? (
-                            <Button 
-                              variant="destructive"
-                              onClick={() => removeFromWatchlistMutation.mutate(security.id)}
-                              disabled={removeFromWatchlistMutation.isPending}
-                              className="text-white shadow-sm hover:shadow-md transition-all duration-200"
+                          {/* E-commerce Style Action Buttons */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedSecurity(security);
+                                setIsDetailsModalOpen(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 hover:border-blue-300 transition-all duration-200"
                             >
-                              {removeFromWatchlistMutation.isPending ? (
-                                <LoadingSpinner size="small" />
-                              ) : (
-                                <>
-                                  <Check className="w-4 h-4 mr-2" />
-                                  In Watchlist
-                                </>
-                              )}
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
                             </Button>
-                          ) : (
-                            <Button 
-                              onClick={() => addToWatchlistMutation.mutate(security.id)}
-                              disabled={addToWatchlistMutation.isPending}
-                              className="bg-primary-500 hover:bg-primary-600 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                            >
-                              {addToWatchlistMutation.isPending ? (
-                                <LoadingSpinner size="small" />
-                              ) : (
-                                <>
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Add to Watchlist
-                                </>
-                              )}
-                            </Button>
-                          )}
+                            
+                            {isInWatchlist(security.id) ? (
+                              <Button 
+                                variant="destructive"
+                                onClick={() => removeFromWatchlistMutation.mutate(security.id)}
+                                disabled={removeFromWatchlistMutation.isPending}
+                                className="text-white shadow-sm hover:shadow-md transition-all duration-200"
+                              >
+                                {removeFromWatchlistMutation.isPending ? (
+                                  <LoadingSpinner size="sm" />
+                                ) : (
+                                  <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    In Watchlist
+                                  </>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button 
+                                onClick={() => addToWatchlistMutation.mutate(security.id)}
+                                disabled={addToWatchlistMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                              >
+                                {addToWatchlistMutation.isPending ? (
+                                  <LoadingSpinner size="sm" />
+                                ) : (
+                                  <>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add to Cart
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-                  </CardContent>
-                </TabsContent>
+              </CardContent>
+            </TabsContent>
 
                 <TabsContent value="purchased" className="mt-0">
                   <CardHeader>
@@ -1223,7 +1262,7 @@ export default function InvestorDashboard() {
                         className="bg-green-600 hover:bg-green-700"
                       >
                         {purchaseWatchlistMutation.isPending ? (
-                          <LoadingSpinner size="small" />
+                          <LoadingSpinner size="sm" />
                         ) : (
                           "Purchase All"
                         )}
