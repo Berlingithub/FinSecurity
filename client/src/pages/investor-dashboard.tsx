@@ -588,35 +588,61 @@ export default function InvestorDashboard() {
                 {securitiesLoading ? (
                   <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 animate-pulse">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="h-6 bg-gray-200 rounded w-20"></div>
-                          <div className="h-6 bg-gray-200 rounded w-12"></div>
-                        </div>
-                        <div className="text-center mb-4">
-                          <div className="h-9 bg-gray-200 rounded w-32 mx-auto mb-1"></div>
-                          <div className="h-4 bg-gray-200 rounded w-24 mx-auto"></div>
-                        </div>
-                        <div className="h-6 bg-gray-200 rounded mb-3"></div>
-                        <div className="space-y-3 mb-4">
-                          <div className="flex justify-between">
+                      <div key={i} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm animate-pulse">
+                        {/* Header Skeleton */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-100">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                            <div className="h-6 bg-gray-200 rounded-full w-12"></div>
+                          </div>
+                          <div className="flex items-center space-x-3">
                             <div className="h-4 bg-gray-200 rounded w-16"></div>
                             <div className="h-4 bg-gray-200 rounded w-20"></div>
                           </div>
-                          <div className="flex justify-between">
-                            <div className="h-4 bg-gray-200 rounded w-20"></div>
-                            <div className="h-4 bg-gray-200 rounded w-12"></div>
-                          </div>
-                          <div className="flex justify-between">
-                            <div className="h-4 bg-gray-200 rounded w-16"></div>
-                            <div className="h-4 bg-gray-200 rounded w-24"></div>
-                          </div>
                         </div>
-                        <div className="h-8 bg-gray-200 rounded mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-32 mb-4"></div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="h-8 bg-gray-200 rounded"></div>
-                          <div className="h-8 bg-gray-200 rounded"></div>
+                        
+                        {/* Content Skeleton */}
+                        <div className="p-6">
+                          {/* Price Display Skeleton */}
+                          <div className="text-center mb-6 py-4 bg-gray-50 rounded-xl">
+                            <div className="h-10 bg-gray-200 rounded w-40 mx-auto mb-1"></div>
+                            <div className="h-4 bg-gray-200 rounded w-24 mx-auto mb-2"></div>
+                            <div className="h-6 bg-gray-200 rounded w-32 mx-auto"></div>
+                          </div>
+                          
+                          {/* Title Skeleton */}
+                          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                          <div className="h-6 bg-gray-200 rounded w-3/4 mb-6"></div>
+                          
+                          {/* Info Boxes Skeleton */}
+                          <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                              <div className="h-4 bg-gray-200 rounded w-12 mb-1"></div>
+                              <div className="h-4 bg-gray-200 rounded w-20"></div>
+                            </div>
+                            <div className="bg-purple-50 p-3 rounded-lg">
+                              <div className="h-4 bg-gray-200 rounded w-16 mb-1"></div>
+                              <div className="h-4 bg-gray-200 rounded w-24"></div>
+                            </div>
+                          </div>
+                          
+                          {/* Description Skeleton */}
+                          <div className="mb-6 p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                            <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+                          </div>
+                          
+                          {/* Metadata Skeleton */}
+                          <div className="flex justify-between items-center mb-6">
+                            <div className="h-3 bg-gray-200 rounded w-20"></div>
+                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                          </div>
+                          
+                          {/* Action Buttons Skeleton */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="h-10 bg-gray-200 rounded"></div>
+                            <div className="h-10 bg-gray-200 rounded"></div>
+                          </div>
                         </div>
                       </div>
                     ))}
