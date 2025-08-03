@@ -6,6 +6,26 @@ SecureReceivables is a full-stack web application for receivables securitization
 
 ## Recent Changes (August 2025)
 
+### E-Commerce Watchlist/Shopping Cart Feature (August 2025)
+- Implemented complete shopping cart-style functionality for investors:
+  - Replaced direct "Purchase" buttons with "Add to Cart" buttons on security cards
+  - Added persistent shopping cart icon in top-right corner with real-time item count badge
+  - Created comprehensive watchlist modal with full item management capabilities
+  - Implemented "Purchase All" batch purchasing functionality allowing investors to buy multiple securities in one transaction
+  - Added individual item removal from watchlist with clear visual feedback
+  - Integrated watchlist total value calculation and prominent display
+  - Built "Clear All" functionality to empty entire watchlist
+  - Enhanced empty state with actionable guidance for users
+- Database and API infrastructure already supported watchlist operations:
+  - Watchlist table with proper user-security relationships
+  - Complete API endpoints for add/remove/purchase batch operations
+  - Real-time query invalidation for seamless UI updates
+- Shopping cart experience seamlessly integrates with existing filtering system:
+  - Users can filter and search securities, then add selected items to watchlist
+  - Watchlist persists across filter changes and navigation
+  - Batch purchase updates all related securities and receivables statuses
+- Complete e-commerce user journey: Browse → Filter → Add to Cart → Review → Batch Purchase
+
 ### Advanced Marketplace Categorization and Filtering System (August 2025)
 - Enhanced database schema with category and risk level fields for receivables:
   - Added category field with options: Manufacturing, Retail, Technology, Services, Healthcare, Finance, Construction, Agriculture
