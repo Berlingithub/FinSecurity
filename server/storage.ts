@@ -3,6 +3,7 @@ import {
   receivables,
   securities,
   notifications,
+  watchlist,
   type User,
   type UpsertUser,
   type RegisterUser,
@@ -12,6 +13,8 @@ import {
   type InsertSecurity,
   type Notification,
   type InsertNotification,
+  type WatchlistItem,
+  type InsertWatchlistItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -43,6 +46,12 @@ export interface IStorage {
   getUserNotifications(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification>;
   deleteNotification(id: string): Promise<void>;
+  // Watchlist operations
+  addToWatchlist(userId: string, securityId: string): Promise<WatchlistItem>;
+  removeFromWatchlist(userId: string, securityId: string): Promise<void>;
+  getUserWatchlist(userId: string): Promise<Security[]>;
+  clearUserWatchlist(userId: string): Promise<void>;
+  purchaseWatchlistItems(userId: string): Promise<Security[]>;
   clearAllNotifications(userId: string): Promise<void>;
 }
 
@@ -318,6 +327,90 @@ export class DatabaseStorage implements IStorage {
 
   async clearAllNotifications(userId: string): Promise<void> {
     await db.delete(notifications).where(eq(notifications.userId, userId));
+  }
+
+  // Watchlist operations
+  async addToWatchlist(userId: string, securityId: string): Promise<WatchlistItem> {
+    const [item] = await db.insert(watchlist).values({
+      userId,
+      securityId,
+    }).returning();
+    return item;
+  }
+
+  async removeFromWatchlist(userId: string, securityId: string): Promise<void> {
+    await db.delete(watchlist).where(
+      and(
+        eq(watchlist.userId, userId),
+        eq(watchlist.securityId, securityId)
+      )
+    );
+  }
+
+  async getUserWatchlist(userId: string): Promise<Security[]> {
+    const watchlistItems = await db
+      .select({
+        security: securities,
+      })
+      .from(watchlist)
+      .innerJoin(securities, eq(watchlist.securityId, securities.id))
+      .where(
+        and(
+          eq(watchlist.userId, userId),
+          eq(securities.status, "listed")
+        )
+      )
+      .orderBy(desc(watchlist.addedAt));
+
+    return watchlistItems.map(item => item.security);
+  }
+
+  async clearUserWatchlist(userId: string): Promise<void> {
+    await db.delete(watchlist).where(eq(watchlist.userId, userId));
+  }
+
+  async purchaseWatchlistItems(userId: string): Promise<Security[]> {
+    // Get all watchlist items for the user
+    const watchlistItems = await this.getUserWatchlist(userId);
+    
+    if (watchlistItems.length === 0) {
+      return [];
+    }
+
+    const purchasedSecurities: Security[] = [];
+
+    // Purchase each security in the watchlist
+    for (const security of watchlistItems) {
+      const [updatedSecurity] = await db
+        .update(securities)
+        .set({
+          status: "purchased",
+          purchasedBy: userId,
+          purchasedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(securities.id, security.id),
+            eq(securities.status, "listed")
+          )
+        )
+        .returning();
+
+      if (updatedSecurity) {
+        purchasedSecurities.push(updatedSecurity);
+        
+        // Update related receivable status
+        await db
+          .update(receivables)
+          .set({ status: "sold" })
+          .where(eq(receivables.id, updatedSecurity.receivableId));
+      }
+    }
+
+    // Clear the watchlist after successful purchases
+    await this.clearUserWatchlist(userId);
+
+    return purchasedSecurities;
   }
 }
 

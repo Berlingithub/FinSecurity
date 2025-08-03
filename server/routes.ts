@@ -466,6 +466,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Watchlist routes
+  app.get('/api/watchlist', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const watchlist = await storage.getUserWatchlist(userId);
+      res.json(watchlist);
+    } catch (error) {
+      console.error("Error fetching watchlist:", error);
+      res.status(500).json({ message: "Failed to fetch watchlist" });
+    }
+  });
+
+  app.post('/api/watchlist/:securityId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { securityId } = req.params;
+      const watchlistItem = await storage.addToWatchlist(userId, securityId);
+      res.json(watchlistItem);
+    } catch (error) {
+      console.error("Error adding to watchlist:", error);
+      res.status(500).json({ message: "Failed to add to watchlist" });
+    }
+  });
+
+  app.delete('/api/watchlist/:securityId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { securityId } = req.params;
+      await storage.removeFromWatchlist(userId, securityId);
+      res.json({ message: "Removed from watchlist" });
+    } catch (error) {
+      console.error("Error removing from watchlist:", error);
+      res.status(500).json({ message: "Failed to remove from watchlist" });
+    }
+  });
+
+  app.post('/api/watchlist/purchase', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const purchasedSecurities = await storage.purchaseWatchlistItems(userId);
+      res.json(purchasedSecurities);
+    } catch (error) {
+      console.error("Error purchasing watchlist items:", error);
+      res.status(500).json({ message: "Failed to purchase watchlist items" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -76,6 +76,14 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Watchlist table
+export const watchlist = pgTable("watchlist", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  securityId: varchar("security_id").notNull().references(() => securities.id),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
   createdAt: true,
@@ -83,6 +91,14 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export const insertWatchlistSchema = createInsertSchema(watchlist).omit({
+  id: true,
+  addedAt: true,
+});
+
+export type WatchlistItem = typeof watchlist.$inferSelect;
+export type InsertWatchlistItem = z.infer<typeof insertWatchlistSchema>;
 
 // Receivables table
 export const receivables = pgTable("receivables", {
@@ -126,6 +142,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   receivables: many(receivables),
   securities: many(securities),
   purchasedSecurities: many(securities, { relationName: "purchased" }),
+  watchlistItems: many(watchlist),
 }));
 
 export const receivablesRelations = relations(receivables, ({ one, many }) => ({
@@ -136,7 +153,7 @@ export const receivablesRelations = relations(receivables, ({ one, many }) => ({
   securities: many(securities),
 }));
 
-export const securitiesRelations = relations(securities, ({ one }) => ({
+export const securitiesRelations = relations(securities, ({ one, many }) => ({
   receivable: one(receivables, {
     fields: [securities.receivableId],
     references: [receivables.id],
@@ -148,6 +165,18 @@ export const securitiesRelations = relations(securities, ({ one }) => ({
   purchaser: one(users, {
     fields: [securities.purchasedBy],
     references: [users.id],
+  }),
+  watchlistItems: many(watchlist),
+}));
+
+export const watchlistRelations = relations(watchlist, ({ one }) => ({
+  user: one(users, {
+    fields: [watchlist.userId],
+    references: [users.id],
+  }),
+  security: one(securities, {
+    fields: [watchlist.securityId],
+    references: [securities.id],
   }),
 }));
 

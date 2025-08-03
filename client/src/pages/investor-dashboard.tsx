@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings, X, Tag, Target, Factory, Store, Computer, Wrench, Heart, Banknote, Hammer, Wheat } from "lucide-react";
+import { LogOut, Wallet, TrendingUp, Coins, Shield, Search, Calculator, Download, Filter, SortAsc, SortDesc, Eye, Calendar, Building2, DollarSign, ShoppingCart, CheckCircle, Clock, FileText, Edit, AlertTriangle, XCircle, Settings, X, Tag, Target, Factory, Store, Computer, Wrench, Heart, Banknote, Hammer, Wheat, Trash2, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,6 +37,8 @@ export default function InvestorDashboard() {
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
   const [marketplaceStatusFilter, setMarketplaceStatusFilter] = useState<string>("all");
   const [ownedStatusFilter, setOwnedStatusFilter] = useState<string>("all");
+  const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false);
+  const [watchlistItems, setWatchlistItems] = useState<Security[]>([]);
 
   // Fetch marketplace securities
   const { data: securities = [], isLoading: securitiesLoading } = useQuery<Security[]>({
@@ -48,6 +50,13 @@ export default function InvestorDashboard() {
   // Fetch purchased securities
   const { data: purchasedSecurities = [], isLoading: purchasedLoading } = useQuery<Security[]>({
     queryKey: ["/api/investor/securities"],
+    enabled: !!user && user.role === "investor",
+    retry: false,
+  });
+
+  // Fetch watchlist
+  const { data: watchlist = [], isLoading: watchlistLoading } = useQuery<Security[]>({
+    queryKey: ["/api/watchlist"],
     enabled: !!user && user.role === "investor",
     retry: false,
   });
@@ -87,6 +96,82 @@ export default function InvestorDashboard() {
       });
     },
   });
+
+  // Watchlist mutations
+  const addToWatchlistMutation = useMutation({
+    mutationFn: async (securityId: string) => {
+      return await apiRequest("POST", `/api/watchlist/${securityId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Added to Watchlist",
+        description: "Security has been added to your watchlist",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlist"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Add",
+        description: error.message || "Failed to add to watchlist",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeFromWatchlistMutation = useMutation({
+    mutationFn: async (securityId: string) => {
+      return await apiRequest("DELETE", `/api/watchlist/${securityId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Removed from Watchlist",
+        description: "Security has been removed from your watchlist",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlist"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Remove",
+        description: error.message || "Failed to remove from watchlist",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const purchaseWatchlistMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/watchlist/purchase");
+    },
+    onSuccess: (purchasedSecurities) => {
+      toast({
+        title: "Batch Purchase Successful",
+        description: `Successfully purchased ${purchasedSecurities.length} securities`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketplace/securities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/investor/securities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlist"] });
+      setIsWatchlistModalOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Batch Purchase Failed",
+        description: error.message || "Failed to purchase watchlist items",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Check if security is in watchlist
+  const isInWatchlist = (securityId: string) => {
+    return watchlist.some(item => item.id === securityId);
+  };
+
+  // Calculate total watchlist value
+  const watchlistTotal = watchlist.reduce((total, security) => {
+    return total + parseFloat(security.totalValue);
+  }, 0);
+
+
 
   // Redirect if not authenticated or not an investor
   useEffect(() => {
@@ -240,6 +325,23 @@ export default function InvestorDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header showNav={false} />
+      
+      {/* Watchlist Cart Icon */}
+      <div className="fixed top-4 right-20 z-50">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="relative bg-white shadow-lg border-gray-200 hover:bg-gray-50" 
+          onClick={() => setIsWatchlistModalOpen(true)}
+        >
+          <ShoppingCart className="h-5 w-5" />
+          {watchlist.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+              {watchlist.length}
+            </span>
+          )}
+        </Button>
+      </div>
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Header */}
@@ -686,20 +788,48 @@ export default function InvestorDashboard() {
                         <div className="grid grid-cols-2 gap-3">
                           <Button
                             variant="outline"
-                            onClick={() => handleViewDetails(security)}
+                            onClick={() => {
+                              setSelectedSecurity(security);
+                              setIsDetailsModalOpen(true);
+                            }}
                             className="text-primary-600 hover:text-primary-700 hover:bg-primary-50 border-primary-200 hover:border-primary-300"
                           >
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </Button>
-                          <Button
-                            onClick={() => handlePurchaseClick(security)}
-                            className="bg-primary-500 hover:bg-primary-600 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                            disabled={purchaseMutation.isPending}
-                          >
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            Purchase
-                          </Button>
+                          
+                          {isInWatchlist(security.id) ? (
+                            <Button 
+                              variant="destructive"
+                              onClick={() => removeFromWatchlistMutation.mutate(security.id)}
+                              disabled={removeFromWatchlistMutation.isPending}
+                              className="text-white shadow-sm hover:shadow-md transition-all duration-200"
+                            >
+                              {removeFromWatchlistMutation.isPending ? (
+                                <LoadingSpinner size="small" />
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  In Watchlist
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <Button 
+                              onClick={() => addToWatchlistMutation.mutate(security.id)}
+                              disabled={addToWatchlistMutation.isPending}
+                              className="bg-primary-500 hover:bg-primary-600 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                            >
+                              {addToWatchlistMutation.isPending ? (
+                                <LoadingSpinner size="small" />
+                              ) : (
+                                <>
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add to Watchlist
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1037,6 +1167,116 @@ export default function InvestorDashboard() {
                       </>
                     )}
                   </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Watchlist Modal */}
+        <Dialog open={isWatchlistModalOpen} onOpenChange={setIsWatchlistModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                My Watchlist ({watchlist.length} items)
+              </DialogTitle>
+              <DialogDescription>
+                Review and manage your watchlist items. You can purchase all items at once or remove individual securities.
+              </DialogDescription>
+            </DialogHeader>
+
+            {watchlist.length === 0 ? (
+              <EmptyState
+                icon={ShoppingCart}
+                title="Your watchlist is empty"
+                description="Add securities to your watchlist to track them and purchase in bulk."
+                actionLabel="Browse Securities"
+                onAction={() => setIsWatchlistModalOpen(false)}
+              />
+            ) : (
+              <div className="space-y-4">
+                {/* Watchlist Summary */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold text-blue-900">Watchlist Summary</h3>
+                      <p className="text-sm text-blue-700">
+                        {watchlist.length} securities • Total value: ${watchlistTotal.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          watchlist.forEach(security => {
+                            removeFromWatchlistMutation.mutate(security.id);
+                          });
+                        }}
+                        disabled={removeFromWatchlistMutation.isPending}
+                      >
+                        Clear All
+                      </Button>
+                      <Button
+                        onClick={() => purchaseWatchlistMutation.mutate()}
+                        disabled={purchaseWatchlistMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {purchaseWatchlistMutation.isPending ? (
+                          <LoadingSpinner size="small" />
+                        ) : (
+                          "Purchase All"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Watchlist Items */}
+                <div className="grid gap-4">
+                  {watchlist.map((security) => (
+                    <div key={security.id} className="border rounded-lg p-4 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-lg">{security.title}</h3>
+                            <Badge variant="outline" className="text-xs">
+                              {security.riskGrade}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Value:</span>
+                              <p className="font-medium">${parseFloat(security.totalValue).toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Return:</span>
+                              <p className="font-medium text-green-600">
+                                {security.expectedReturn ? `${security.expectedReturn}%` : 'N/A'}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Duration:</span>
+                              <p className="font-medium">{security.duration}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Currency:</span>
+                              <p className="font-medium">{security.currency}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFromWatchlistMutation.mutate(security.id)}
+                          disabled={removeFromWatchlistMutation.isPending}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
