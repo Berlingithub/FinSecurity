@@ -4,6 +4,20 @@
 
 SecureReceivables is a full-stack web application for receivables securitization and investment opportunities. The platform connects merchants who want to securitize their receivables with investors looking for investment opportunities. Users can register as either merchants or investors and access role-specific dashboards with tailored functionality.
 
+## Recent Changes (August 2025)
+
+### Merchant Receivables Management Module
+- Added comprehensive receivables creation and management system
+- Database schema updated with receivables table including merchant relations
+- Full CRUD API endpoints for receivables with proper authentication
+- Enhanced merchant dashboard with:
+  - Interactive receivables creation form with validation
+  - Real-time receivables listing with status badges
+  - Dynamic statistics based on actual data
+  - Bulk operations and individual receivable management
+- Form validation using Zod schemas for data integrity
+- Responsive UI with modal dialogs and loading states
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

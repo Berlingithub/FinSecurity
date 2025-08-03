@@ -106,6 +106,7 @@ export default function Register() {
                           <FormControl>
                             <Input 
                               {...field}
+                              value={field.value || ""}
                               placeholder="John"
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                             />
@@ -124,6 +125,7 @@ export default function Register() {
                           <FormControl>
                             <Input 
                               {...field}
+                              value={field.value || ""}
                               placeholder="Doe"
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                             />
@@ -143,6 +145,7 @@ export default function Register() {
                         <FormControl>
                           <Input 
                             {...field}
+                            value={field.value || ""}
                             type="email"
                             placeholder="john.doe@example.com"
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
@@ -203,7 +206,7 @@ export default function Register() {
                     <Checkbox 
                       id="terms" 
                       checked={termsAccepted}
-                      onCheckedChange={setTermsAccepted}
+                      onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                       className="h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded"
                     />
                     <label htmlFor="terms" className="text-sm text-gray-700">

@@ -1,14 +1,132 @@
-import { useEffect } from "react";
-import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LogOut, FileText, Shield, Layers, Star, Receipt, Plus, BarChart, Settings, Calendar, DollarSign, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { createReceivableSchema, type CreateReceivable, type Receivable } from "@shared/schema";
+import { format } from "date-fns";
 import Header from "@/components/Header";
 
 export default function MerchantDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const form = useForm<CreateReceivable>({
+    resolver: zodResolver(createReceivableSchema),
+    defaultValues: {
+      debtorName: "",
+      amount: "",
+      currency: "USD",
+      dueDate: "",
+      description: "",
+    },
+  });
+
+  // Fetch receivables
+  const { data: receivables = [], isLoading: receivablesLoading } = useQuery<Receivable[]>({
+    queryKey: ["/api/receivables"],
+    enabled: !!user && user.role === "merchant",
+    retry: false,
+  });
+
+  // Create receivable mutation
+  const createReceivableMutation = useMutation({
+    mutationFn: async (data: CreateReceivable) => {
+      const response = await apiRequest("POST", "/api/receivables", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Receivable created successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/receivables"] });
+      setIsAddModalOpen(false);
+      form.reset();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create receivable. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete receivable mutation
+  const deleteReceivableMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/receivables/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Receivable deleted successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/receivables"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete receivable. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: CreateReceivable) => {
+    createReceivableMutation.mutate(data);
+  };
+
+  const handleDeleteReceivable = (id: string) => {
+    if (confirm("Are you sure you want to delete this receivable?")) {
+      deleteReceivableMutation.mutate(id);
+    }
+  };
+
+  // Calculate totals
+  const totalReceivables = receivables.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+  const activeReceivables = receivables.filter(r => r.status === "active").length;
+  const securitizedAmount = receivables
+    .filter(r => r.status === "securitized")
+    .reduce((sum, r) => sum + parseFloat(r.amount), 0);
 
   // Redirect if not authenticated or not a merchant
   useEffect(() => {
@@ -73,15 +191,14 @@ export default function MerchantDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Receivables</p>
-                  <p className="text-2xl font-bold text-gray-900">$245,000</p>
+                  <p className="text-2xl font-bold text-gray-900">${totalReceivables.toLocaleString()}</p>
                 </div>
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-primary-500" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-success-500 font-medium">+12%</span>
-                <span className="text-gray-600 ml-1">from last month</span>
+                <span className="text-gray-600">{receivables.length} total receivables</span>
               </div>
             </CardContent>
           </Card>
@@ -91,15 +208,14 @@ export default function MerchantDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Securitized Amount</p>
-                  <p className="text-2xl font-bold text-gray-900">$150,000</p>
+                  <p className="text-2xl font-bold text-gray-900">${securitizedAmount.toLocaleString()}</p>
                 </div>
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                   <Shield className="w-5 h-5 text-success-500" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-success-500 font-medium">+8%</span>
-                <span className="text-gray-600 ml-1">from last month</span>
+                <span className="text-gray-600">{receivables.filter(r => r.status === "securitized").length} securitized</span>
               </div>
             </CardContent>
           </Card>
@@ -108,15 +224,15 @@ export default function MerchantDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Pools</p>
-                  <p className="text-2xl font-bold text-gray-900">3</p>
+                  <p className="text-sm font-medium text-gray-600">Active Receivables</p>
+                  <p className="text-2xl font-bold text-gray-900">{activeReceivables}</p>
                 </div>
                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                   <Layers className="w-5 h-5 text-accent-500" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-600">2 pending approval</span>
+                <span className="text-gray-600">Available for securitization</span>
               </div>
             </CardContent>
           </Card>
@@ -125,15 +241,15 @@ export default function MerchantDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                  <p className="text-2xl font-bold text-gray-900">4.8</p>
+                  <p className="text-sm font-medium text-gray-600">Overdue</p>
+                  <p className="text-2xl font-bold text-gray-900">{receivables.filter(r => r.status === "overdue").length}</p>
                 </div>
-                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <Star className="w-5 h-5 text-yellow-500" />
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-red-500" />
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                <span className="text-gray-600">Based on 24 reviews</span>
+                <span className="text-gray-600">Past due date</span>
               </div>
             </CardContent>
           </Card>
@@ -143,45 +259,165 @@ export default function MerchantDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
             <Card className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">Recent Receivables</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold text-gray-900">Your Receivables</CardTitle>
+                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary-500 hover:bg-primary-600 text-white">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Receivable
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Add New Receivable</DialogTitle>
+                      <DialogDescription>
+                        Create a new trade receivable for securitization.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="debtorName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Debtor Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Company or individual name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="amount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Amount</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="0.00" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="currency"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Currency</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select currency" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="USD">USD</SelectItem>
+                                    <SelectItem value="EUR">EUR</SelectItem>
+                                    <SelectItem value="GBP">GBP</SelectItem>
+                                    <SelectItem value="INR">INR</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="dueDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Due Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description (Optional)</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Additional notes about this receivable" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-primary-500 hover:bg-primary-600"
+                          disabled={createReceivableMutation.isPending}
+                        >
+                          {createReceivableMutation.isPending ? "Creating..." : "Create Receivable"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                      <Receipt className="w-5 h-5 text-primary-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">TechCorp Inc.</p>
-                      <p className="text-sm text-gray-600">Invoice #12345</p>
-                    </div>
+              <CardContent>
+                {receivablesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">$25,000</p>
-                    <p className="text-sm text-gray-600">Due: Jan 15, 2024</p>
+                ) : receivables.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No receivables yet</p>
+                    <p className="text-sm text-gray-500">Add your first receivable to get started</p>
                   </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                      <Receipt className="w-5 h-5 text-primary-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Global Solutions LLC</p>
-                      <p className="text-sm text-gray-600">Invoice #12346</p>
-                    </div>
+                ) : (
+                  <div className="space-y-3">
+                    {receivables.map((receivable) => (
+                      <div key={receivable.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Receipt className="w-5 h-5 text-primary-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{receivable.debtorName}</p>
+                              <p className="text-sm text-gray-600">{receivable.currency} {parseFloat(receivable.amount).toLocaleString()}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={receivable.status === "active" ? "default" : receivable.status === "overdue" ? "destructive" : "secondary"}>
+                              {receivable.status}
+                            </Badge>
+                            <p className="text-sm text-gray-600">Due: {format(new Date(receivable.dueDate), "MMM dd, yyyy")}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteReceivable(receivable.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        {receivable.description && (
+                          <p className="mt-2 text-sm text-gray-600 ml-13">{receivable.description}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">$35,000</p>
-                    <p className="text-sm text-gray-600">Due: Jan 20, 2024</p>
-                  </div>
-                </div>
-                
-                <Button className="mt-4 w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg transition-colors">
-                  Add New Receivable
-                </Button>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -193,10 +429,11 @@ export default function MerchantDashboard() {
                 <div className="space-y-3">
                   <Button 
                     variant="ghost"
+                    onClick={() => setIsAddModalOpen(true)}
                     className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left justify-start"
                   >
                     <Plus className="w-4 h-4 mr-3" />
-                    Create Pool
+                    Add Receivable
                   </Button>
                   <Button 
                     variant="ghost"

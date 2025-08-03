@@ -57,13 +57,25 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
+  // First check if user exists and has a role
+  const existingUser = await storage.getUser(claims["sub"]);
+  
+  // Only set role to merchant if user doesn't exist or doesn't have a role
+  const userData: any = {
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-  });
+  };
+  
+  // If user doesn't exist, we'll let them choose their role during registration
+  // If user exists, preserve their existing role
+  if (existingUser?.role) {
+    userData.role = existingUser.role;
+  }
+  
+  await storage.upsertUser(userData);
 }
 
 export async function setupAuth(app: Express) {
