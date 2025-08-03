@@ -48,6 +48,12 @@ export default function SecurityDetailPage() {
     retry: false,
   });
 
+  // Fetch all marketplace securities for related securities
+  const { data: allSecurities = [] } = useQuery<any[]>({
+    queryKey: ["/api/marketplace/securities"],
+    retry: false,
+  });
+
   // Watchlist mutations
   const addToWatchlistMutation = useMutation({
     mutationFn: async (securityId: string) => {
@@ -145,6 +151,48 @@ export default function SecurityDetailPage() {
       helpful: 15
     }
   ];
+
+  // Get related securities logic
+  const getRelatedSecurities = (currentSecurity: any, allSecurities: any[], count = 4) => {
+    if (!currentSecurity || !allSecurities.length) return [];
+    
+    // Filter out current security
+    const otherSecurities = allSecurities.filter(s => s.id !== currentSecurity.id);
+    
+    if (otherSecurities.length === 0) return [];
+    
+    // Try to find securities with same category first
+    const sameCategory = otherSecurities.filter(s => s.category === currentSecurity.category);
+    
+    // If we have enough same category securities, prioritize them
+    if (sameCategory.length >= count) {
+      return sameCategory.slice(0, count);
+    }
+    
+    // Otherwise, try same risk level
+    const sameRisk = otherSecurities.filter(s => s.riskLevel === currentSecurity.riskLevel);
+    
+    // Combine and deduplicate
+    const related = [...sameCategory];
+    
+    // Add same risk securities that aren't already included
+    sameRisk.forEach(s => {
+      if (related.length < count && !related.find(r => r.id === s.id)) {
+        related.push(s);
+      }
+    });
+    
+    // Fill remaining slots with random securities
+    const remaining = otherSecurities.filter(s => !related.find(r => r.id === s.id));
+    while (related.length < count && remaining.length > 0) {
+      const randomIndex = Math.floor(Math.random() * remaining.length);
+      related.push(remaining.splice(randomIndex, 1)[0]);
+    }
+    
+    return related.slice(0, count);
+  };
+
+  const relatedSecurities = security ? getRelatedSecurities(security, allSecurities, 4) : [];
 
   // Mock reviews data
   const mockReviews = [
@@ -702,6 +750,120 @@ export default function SecurityDetailPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Related Securities Section */}
+        {relatedSecurities.length > 0 && (
+          <div className="mt-12">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  You Might Also Like
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
+                  {relatedSecurities.map((relatedSecurity: any) => {
+                    const CategoryIcon = getCategoryIcon(relatedSecurity.category);
+                    const daysToMaturity = calculateDaysToMaturity(relatedSecurity.dueDate);
+                    
+                    return (
+                      <div
+                        key={relatedSecurity.id}
+                        className="flex-shrink-0 w-64 bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 hover:-translate-y-1"
+                      >
+                        {/* Mini card header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <CategoryIcon className="h-4 w-4 text-gray-600" />
+                            <span className="text-xs text-gray-500 font-medium">
+                              {relatedSecurity.category}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className={`w-2 h-2 rounded-full ${
+                              relatedSecurity.riskLevel === 'Low' ? 'bg-green-500' :
+                              relatedSecurity.riskLevel === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}></div>
+                            <span className={`text-xs font-medium ${
+                              relatedSecurity.riskLevel === 'Low' ? 'text-green-700' :
+                              relatedSecurity.riskLevel === 'Medium' ? 'text-yellow-700' : 'text-red-700'
+                            }`}>
+                              {relatedSecurity.riskLevel}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Amount and yield */}
+                        <div className="mb-3">
+                          <div className="text-lg font-bold text-gray-900">
+                            ${parseFloat(relatedSecurity.totalValue).toLocaleString()}
+                          </div>
+                          {relatedSecurity.yieldRate && (
+                            <div className="text-sm text-green-600 font-medium">
+                              {relatedSecurity.yieldRate}% Expected Yield
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Due date */}
+                        <div className="flex items-center gap-1 mb-3 text-sm text-gray-600">
+                          <Calendar className="h-3 w-3" />
+                          <span>Due {format(new Date(relatedSecurity.dueDate), 'MMM d, yyyy')}</span>
+                        </div>
+
+                        {/* Merchant info */}
+                        <div className="text-xs text-gray-500 mb-3 truncate">
+                          {relatedSecurity.merchantName}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs"
+                            onClick={() => setLocation(`/security/${relatedSecurity.id}`)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View Details
+                          </Button>
+                          {user?.role === "investor" && (
+                            <Button
+                              size="sm"
+                              variant={isInWatchlist(relatedSecurity.id) ? "secondary" : "default"}
+                              className="flex-1 text-xs"
+                              onClick={() => {
+                                if (isInWatchlist(relatedSecurity.id)) {
+                                  removeFromWatchlistMutation.mutate(relatedSecurity.id);
+                                } else {
+                                  addToWatchlistMutation.mutate(relatedSecurity.id);
+                                }
+                              }}
+                              disabled={addToWatchlistMutation.isPending || removeFromWatchlistMutation.isPending}
+                            >
+                              {isInWatchlist(relatedSecurity.id) ? (
+                                <>
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Added
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Add to Cart
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -141,8 +141,9 @@ export default function InvestorDashboard() {
   });
 
   const purchaseWatchlistMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/watchlist/purchase");
+    mutationFn: async (): Promise<any[]> => {
+      const response = await apiRequest("POST", "/api/watchlist/purchase");
+      return response as any[];
     },
     onSuccess: (purchasedSecurities: any[]) => {
       toast({
