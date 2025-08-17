@@ -2,7 +2,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { registerUserSchema, createReceivableSchema, createSecuritySchema } from "@shared/schema";
+import { 
+  registerUserSchema, 
+  createReceivableSchema, 
+  createSecuritySchema,
+  createReceivableEnhancedSchema,
+  purchaseSecuritySchema,
+  updateProfileEnhancedSchema
+} from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -83,16 +90,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only merchants can create receivables" });
       }
 
-      const validation = createReceivableSchema.safeParse(req.body);
+      const validation = createReceivableEnhancedSchema.safeParse(req.body);
       if (!validation.success) {
         const validationError = fromError(validation.error);
         return res.status(400).json({ message: validationError.message });
       }
 
-      const { amount, ...rest } = validation.data;
+      const { amount, dueDiligence, ...rest } = validation.data;
       const receivable = await storage.createReceivable(userId, {
         ...rest,
-        amount: amount, // Convert string to decimal
+        amount: amount,
+        orderPhotos: dueDiligence?.orderPhotos || null,
+        legalDocuments: dueDiligence?.legalDocuments || null,
+        debtorContact: dueDiligence?.debtorContact || null,
+        orderDetails: dueDiligence?.orderDetails || null,
       });
 
       res.json(receivable);
@@ -307,26 +318,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only investors can purchase securities" });
       }
 
-      const security = await storage.purchaseSecurity(id, userId);
+      const validation = purchaseSecuritySchema.safeParse(req.body);
+      if (!validation.success) {
+        const validationError = fromError(validation.error);
+        return res.status(400).json({ message: validationError.message });
+      }
+
+      const { paymentMethod, amount } = validation.data;
+
+      // Get security details
+      const security = await storage.getSecurity(id);
+      if (!security || security.status !== "listed") {
+        return res.status(400).json({ message: "Security not available for purchase" });
+      }
+
+      // Calculate commission (1% from both buyer and seller)
+      const commissionAmount = parseFloat(security.totalValue) * 0.01;
+      const totalAmount = parseFloat(security.totalValue) + commissionAmount;
+
+      // Simulate payment processing
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
+      // Create transaction record
+      const transaction = await storage.createTransaction({
+        securityId: id,
+        buyerId: userId,
+        sellerId: security.merchantId,
+        amount: security.totalValue,
+        currency: security.currency,
+        commissionAmount: commissionAmount.toString(),
+        paymentMethod,
+        status: "completed",
+        transactionId,
+        gatewayResponse: {
+          success: true,
+          transactionId,
+          amount: totalAmount,
+          commission: commissionAmount,
+        },
+      });
+
+      // Purchase the security
+      const purchasedSecurity = await storage.purchaseSecurity(id, userId);
+      
+      // Update security with payment details
+      await storage.updateSecurity(id, {
+        paymentMethod,
+        paymentStatus: "completed",
+        transactionId,
+        commissionAmount: commissionAmount.toString(),
+      });
+
       // Update related receivable status to sold
       await storage.updateReceivable(security.receivableId, { status: "sold" });
+
+      // Update merchant's wallet balance (amount minus commission)
+      const merchantAmount = parseFloat(security.totalValue) - commissionAmount;
+      await storage.updateUserWalletBalance(security.merchantId, merchantAmount);
 
       // Create notification for merchant
       await storage.createNotification({
         userId: security.merchantId,
         type: "security_purchased",
         title: "Security Purchased!",
-        message: `Your security "${security.title}" has been purchased by an investor.`,
+        message: `Your security "${security.title}" has been purchased for $${parseFloat(security.totalValue).toLocaleString()}. Commission: $${commissionAmount.toFixed(2)}`,
         data: {
           securityId: security.id,
           securityTitle: security.title,
           amount: security.totalValue,
+          commission: commissionAmount,
+          transactionId,
         },
         read: false,
       });
 
-      res.json(security);
+      // Create notification for investor
+      await storage.createNotification({
+        userId: userId,
+        type: "security_purchased",
+        title: "Purchase Successful!",
+        message: `You have successfully purchased "${security.title}" for $${totalAmount.toLocaleString()}.`,
+        data: {
+          securityId: security.id,
+          securityTitle: security.title,
+          amount: totalAmount,
+          commission: commissionAmount,
+          transactionId,
+        },
+        read: false,
+      });
+
+      res.json({
+        security: purchasedSecurity,
+        transaction,
+        commission: commissionAmount,
+        totalAmount,
+      });
     } catch (error) {
       console.error("Error purchasing security:", error);
       if ((error as Error).message === "Security not found or already purchased") {
@@ -425,21 +512,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const profileData = req.body;
+      
+      const validation = updateProfileEnhancedSchema.safeParse(req.body);
+      if (!validation.success) {
+        const validationError = fromError(validation.error);
+        return res.status(400).json({ message: validationError.message });
+      }
 
-      // Validate profile data
-      const validatedData = {
-        firstName: profileData.firstName || null,
-        lastName: profileData.lastName || null,
-        phoneNumber: profileData.phoneNumber || null,
-        address: profileData.address || null,
-      };
-
-      const updatedUser = await storage.updateUserProfile(userId, validatedData);
+      const updatedUser = await storage.updateUserProfile(userId, validation.data);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Transaction history routes
+  app.get('/api/transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const transactions = await storage.getTransactionsByUser(userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+
+  app.get('/api/transactions/:securityId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { securityId } = req.params;
+      const transactions = await storage.getTransactionsBySecurity(securityId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching security transactions:", error);
+      res.status(500).json({ message: "Failed to fetch security transactions" });
     }
   });
 

@@ -22,6 +22,7 @@ import NotificationCenter from "@/components/NotificationCenter";
 import EmptyState from "@/components/EmptyState";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SkeletonCard from "@/components/SkeletonCard";
+import EnhancedReceivableForm from "@/components/EnhancedReceivableForm";
 
 export default function MerchantDashboard() {
   const { toast } = useToast();
@@ -99,7 +100,7 @@ export default function MerchantDashboard() {
 
   // Create receivable mutation
   const createReceivableMutation = useMutation({
-    mutationFn: async (data: CreateReceivable) => {
+    mutationFn: async (data: any) => {
       const response = await apiRequest("POST", "/api/receivables", data);
       return response.json();
     },
@@ -270,7 +271,7 @@ export default function MerchantDashboard() {
     },
   });
 
-  const onSubmit = (data: CreateReceivable) => {
+  const onSubmit = (data: any) => {
     createReceivableMutation.mutate(data);
   };
 
@@ -535,159 +536,23 @@ export default function MerchantDashboard() {
                         Add Receivable
                       </Button>
                     </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
+                  <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Add New Receivable</DialogTitle>
                       <DialogDescription>
-                        Create a new trade receivable for securitization.
+                        Create a new trade receivable with enhanced due diligence features.
                       </DialogDescription>
                     </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="debtorName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Debtor Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Company or individual name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="amount"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Amount</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="0.00" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="currency"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Currency</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select currency" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="USD">USD</SelectItem>
-                                    <SelectItem value="EUR">EUR</SelectItem>
-                                    <SelectItem value="GBP">GBP</SelectItem>
-                                    <SelectItem value="INR">INR</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <FormField
-                          control={form.control}
-                          name="dueDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Due Date</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    <EnhancedReceivableForm
+                      onSubmit={onSubmit}
+                      isLoading={createReceivableMutation.isPending}
+                      onCancel={() => setIsAddModalOpen(false)}
+                    />
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="category"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Category</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                                    <SelectItem value="Retail">Retail</SelectItem>
-                                    <SelectItem value="Technology">Technology</SelectItem>
-                                    <SelectItem value="Services">Services</SelectItem>
-                                    <SelectItem value="Healthcare">Healthcare</SelectItem>
-                                    <SelectItem value="Finance">Finance</SelectItem>
-                                    <SelectItem value="Construction">Construction</SelectItem>
-                                    <SelectItem value="Agriculture">Agriculture</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="riskLevel"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Risk Level</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select risk level" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="Low">Low Risk</SelectItem>
-                                    <SelectItem value="Medium">Medium Risk</SelectItem>
-                                    <SelectItem value="High">High Risk</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
                         
-                        <FormField
-                          control={form.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="Additional notes about this receivable" {...field} value={field.value || ""} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+
                         
-                        <Button 
-                          type="submit" 
-                          className="w-full bg-primary-500 hover:bg-primary-600"
-                          disabled={createReceivableMutation.isPending}
-                        >
-                          {createReceivableMutation.isPending ? "Creating..." : "Create Receivable"}
-                        </Button>
-                      </form>
-                    </Form>
+
                   </DialogContent>
                   </Dialog>
                 </div>

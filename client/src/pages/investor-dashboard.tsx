@@ -20,6 +20,8 @@ import NotificationCenter from "@/components/NotificationCenter";
 import EmptyState from "@/components/EmptyState";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SkeletonCard from "@/components/SkeletonCard";
+import PaymentForm from "@/components/PaymentForm";
+import TransactionHistory from "@/components/TransactionHistory";
 
 type SortOption = 'amount-asc' | 'amount-desc' | 'date-asc' | 'date-desc' | 'newest' | 'yield-desc' | 'risk-asc' | 'popular';
 
@@ -100,21 +102,31 @@ export default function InvestorDashboard() {
     retry: false,
   });
 
-  // Purchase mutation
+  // Fetch transaction history
+  const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
+    queryKey: ["/api/transactions"],
+    enabled: !!user && user.role === "investor",
+    retry: false,
+  });
+
+  // Purchase mutation with payment
   const purchaseMutation = useMutation({
-    mutationFn: async (securityId: string) => {
-      return await apiRequest("POST", `/api/securities/${securityId}/purchase`);
+    mutationFn: async ({ securityId, paymentData }: { securityId: string; paymentData: any }) => {
+      const response = await apiRequest("POST", `/api/securities/${securityId}/purchase`, paymentData);
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const { security, transaction, commission, totalAmount } = data;
       toast({
         title: "Purchase Successful",
-        description: "You have successfully purchased the security!",
+        description: `You have successfully purchased "${security.title}" for $${totalAmount.toLocaleString()}. Commission: $${commission.toFixed(2)}`,
       });
       setIsPurchaseModalOpen(false);
       setSelectedSecurity(null);
-      // Invalidate both marketplace and purchased securities
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["/api/marketplace/securities"] });
       queryClient.invalidateQueries({ queryKey: ["/api/investor/securities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -180,7 +192,7 @@ export default function InvestorDashboard() {
   const purchaseWatchlistMutation = useMutation({
     mutationFn: async (): Promise<any[]> => {
       const response = await apiRequest("POST", "/api/watchlist/purchase");
-      return response as any[];
+      return response.json();
     },
     onSuccess: (purchasedSecurities: any[]) => {
       toast({
@@ -807,9 +819,10 @@ export default function InvestorDashboard() {
               <Tabs defaultValue="marketplace" className="w-full">
                 <CardHeader>
                   <div className="flex justify-between items-center">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                       <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
                       <TabsTrigger value="purchased">My Securities</TabsTrigger>
+                      <TabsTrigger value="transactions">Transactions</TabsTrigger>
                     </TabsList>
                   </div>
                 </CardHeader>
@@ -1691,6 +1704,15 @@ export default function InvestorDashboard() {
                     )}
                   </CardContent>
                 </TabsContent>
+
+                <TabsContent value="transactions" className="mt-0">
+                  <CardContent>
+                                  <TransactionHistory 
+                transactions={transactions as any} 
+                isLoading={transactionsLoading} 
+              />
+                  </CardContent>
+                </TabsContent>
               </Tabs>
             </Card>
           </div>
@@ -1846,71 +1868,24 @@ export default function InvestorDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Purchase Confirmation Modal */}
+        {/* Purchase Payment Modal */}
         <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Confirm Purchase</DialogTitle>
+              <DialogTitle>Complete Purchase</DialogTitle>
               <DialogDescription>
-                Are you sure you want to purchase this security?
+                Choose your payment method and complete the transaction
               </DialogDescription>
             </DialogHeader>
             {selectedSecurity && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-2">{selectedSecurity.title}</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Investment Amount:</span>
-                      <p className="font-medium">{selectedSecurity.currency} {parseFloat(selectedSecurity.totalValue).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Expected Return:</span>
-                      <p className="font-medium text-green-600">{selectedSecurity.expectedReturn ? `${selectedSecurity.expectedReturn}%` : 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Duration:</span>
-                      <p className="font-medium">{selectedSecurity.duration}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Risk Grade:</span>
-                      <Badge variant={
-                        selectedSecurity.riskGrade?.startsWith('A') ? 'default' :
-                        selectedSecurity.riskGrade?.startsWith('B') ? 'secondary' : 'destructive'
-                      }>
-                        {selectedSecurity.riskGrade || 'Not Rated'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-3">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsPurchaseModalOpen(false)}
-                    disabled={purchaseMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleConfirmPurchase}
-                    disabled={purchaseMutation.isPending}
-                    className="bg-primary-500 hover:bg-primary-600"
-                  >
-                    {purchaseMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Confirm Purchase
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
+              <PaymentForm
+                security={selectedSecurity}
+                onSubmit={(paymentData) => {
+                  purchaseMutation.mutate({ securityId: selectedSecurity.id, paymentData });
+                }}
+                isLoading={purchaseMutation.isPending}
+                onCancel={() => setIsPurchaseModalOpen(false)}
+              />
             )}
           </DialogContent>
         </Dialog>

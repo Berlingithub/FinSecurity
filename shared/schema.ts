@@ -39,6 +39,14 @@ export const users = pgTable("users", {
   walletBalance: decimal("wallet_balance", { precision: 12, scale: 2 }).default("0.00"),
   phoneNumber: varchar("phone_number"),
   address: text("address"),
+  // Enhanced due diligence fields
+  companyName: varchar("company_name"),
+  businessLicense: varchar("business_license"),
+  taxId: varchar("tax_id"),
+  country: varchar("country"),
+  timezone: varchar("timezone"),
+  kycStatus: varchar("kyc_status", { enum: ["pending", "verified", "rejected"] }).default("pending"),
+  kycDocuments: jsonb("kyc_documents"), // Array of document URLs
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -113,6 +121,14 @@ export const receivables = pgTable("receivables", {
   category: varchar("category", { enum: ["Manufacturing", "Retail", "Technology", "Services", "Healthcare", "Finance", "Construction", "Agriculture"] }).notNull().default("Services"),
   riskLevel: varchar("risk_level", { enum: ["Low", "Medium", "High"] }).notNull().default("Medium"),
   status: varchar("status", { enum: ["draft", "active", "securitized", "listed", "sold", "paid", "overdue"] }).notNull().default("draft"),
+  // Enhanced due diligence fields
+  orderPhotos: jsonb("order_photos"), // Array of photo URLs
+  legalDocuments: jsonb("legal_documents"), // Array of document URLs
+  debtorContact: jsonb("debtor_contact"), // Contact information object
+  orderDetails: jsonb("order_details"), // Detailed order information
+  verificationStatus: varchar("verification_status", { enum: ["pending", "verified", "rejected"] }).default("pending"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -137,6 +153,29 @@ export const securities = pgTable("securities", {
   purchasedBy: varchar("purchased_by").references(() => users.id),
   purchasedAt: timestamp("purchased_at"),
   paidAt: timestamp("paid_at"),
+  // Enhanced e-commerce fields
+  listingPrice: decimal("listing_price", { precision: 12, scale: 2 }),
+  commissionAmount: decimal("commission_amount", { precision: 12, scale: 2 }),
+  paymentMethod: varchar("payment_method", { enum: ["credit_card", "bank_transfer", "crypto", "digital_wallet"] }),
+  paymentStatus: varchar("payment_status", { enum: ["pending", "processing", "completed", "failed"] }).default("pending"),
+  transactionId: varchar("transaction_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Transactions table for payment tracking
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  securityId: varchar("security_id").notNull().references(() => securities.id),
+  buyerId: varchar("buyer_id").notNull().references(() => users.id),
+  sellerId: varchar("seller_id").notNull().references(() => users.id),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  commissionAmount: decimal("commission_amount", { precision: 12, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method", { enum: ["credit_card", "bank_transfer", "crypto", "digital_wallet"] }),
+  status: varchar("status", { enum: ["pending", "processing", "completed", "failed", "refunded"] }).default("pending"),
+  transactionId: varchar("transaction_id"),
+  gatewayResponse: jsonb("gateway_response"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -209,6 +248,54 @@ export const createSecuritySchema = insertSecuritySchema.extend({
   expectedReturn: z.string().regex(/^\d+(\.\d{1,2})?$/, "Expected return must be a valid percentage").optional(),
 });
 
+// Enhanced schemas for due diligence
+export const dueDiligenceSchema = z.object({
+  orderPhotos: z.array(z.string().url()).optional(),
+  legalDocuments: z.array(z.string().url()).optional(),
+  debtorContact: z.object({
+    name: z.string(),
+    email: z.string().email(),
+    phone: z.string(),
+    address: z.string(),
+  }).optional(),
+  orderDetails: z.object({
+    orderNumber: z.string(),
+    productDescription: z.string(),
+    quantity: z.number(),
+    unitPrice: z.number(),
+    totalAmount: z.number(),
+    deliveryDate: z.string(),
+  }).optional(),
+});
+
+export const createReceivableEnhancedSchema = createReceivableSchema.extend({
+  dueDiligence: dueDiligenceSchema.optional(),
+});
+
+// Payment processing schemas
+export const paymentMethodSchema = z.enum(["credit_card", "bank_transfer", "crypto", "digital_wallet"]);
+
+export const purchaseSecuritySchema = z.object({
+  paymentMethod: paymentMethodSchema,
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Amount must be a valid number with up to 2 decimal places"),
+});
+
+// KYC schemas
+export const kycDocumentSchema = z.object({
+  type: z.enum(["passport", "drivers_license", "national_id", "business_license", "tax_certificate"]),
+  url: z.string().url(),
+  verified: z.boolean().default(false),
+});
+
+export const updateProfileEnhancedSchema = updateProfileSchema.extend({
+  companyName: z.string().optional(),
+  businessLicense: z.string().optional(),
+  taxId: z.string().optional(),
+  country: z.string().optional(),
+  timezone: z.string().optional(),
+  kycDocuments: z.array(kycDocumentSchema).optional(),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -217,6 +304,17 @@ export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type Receivable = typeof receivables.$inferSelect;
 export type InsertReceivable = z.infer<typeof insertReceivableSchema>;
 export type CreateReceivable = z.infer<typeof createReceivableSchema>;
+export type CreateReceivableEnhanced = z.infer<typeof createReceivableEnhancedSchema>;
 export type Security = typeof securities.$inferSelect;
 export type InsertSecurity = z.infer<typeof insertSecuritySchema>;
 export type CreateSecurity = z.infer<typeof createSecuritySchema>;
+export type Transaction = typeof transactions.$inferSelect;
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type PurchaseSecurity = z.infer<typeof purchaseSecuritySchema>;
+export type UpdateProfileEnhanced = z.infer<typeof updateProfileEnhancedSchema>;

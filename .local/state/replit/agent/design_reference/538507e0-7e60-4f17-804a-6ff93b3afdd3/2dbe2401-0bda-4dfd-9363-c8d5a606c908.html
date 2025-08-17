@@ -1,0 +1,708 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureReceivables - Financial Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#1E40AF',
+                            600: '#1d4ed8',
+                            700: '#1e3a8a',
+                        },
+                        success: {
+                            500: '#059669',
+                            600: '#047857',
+                        },
+                        accent: {
+                            500: '#7C3AED',
+                            600: '#7c2d12',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen">
+    <!-- @COMPONENT: AppHeader -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-shield-alt text-primary-500 text-2xl mr-3"></i>
+                    <h1 class="text-xl font-bold text-gray-900">SecureReceivables</h1>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#" class="text-gray-600 hover:text-primary-500 transition-colors">About</a>
+                    <a href="#" class="text-gray-600 hover:text-primary-500 transition-colors">Features</a>
+                    <a href="#" class="text-gray-600 hover:text-primary-500 transition-colors">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: AppHeader -->
+
+    <!-- @COMPONENT: MainContainer -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- @COMPONENT: AuthenticationSection -->
+        <!-- @STATE: currentView:string = 'welcome' -->
+        <!-- @STATE: isLoggedIn:boolean = false -->
+        <!-- @STATE: userRole:string = null -->
+        <div id="auth-section" class="max-w-md mx-auto">
+            
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-chart-line text-white text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to SecureReceivables</h2>
+                    <p class="text-gray-600">Your trusted platform for receivables securitization and investment opportunities</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <button onclick="showLogin()" class="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                        Sign In
+                    </button>
+                    <button onclick="showRegister()" class="w-full bg-white hover:bg-gray-50 text-primary-500 font-medium py-3 px-4 rounded-lg border-2 border-primary-500 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                        Create Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form" class="hidden bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Sign In</h2>
+                    <p class="text-gray-600">Welcome back! Please sign in to your account</p>
+                </div>
+                
+                <form onsubmit="handleLogin(event)" class="space-y-6">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email" id="login-email" name="email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="Enter your email" data-mock="true">
+                    </div>
+                    
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="login-password" name="password" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="Enter your password" data-mock="true">
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="remember-me" class="h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded">
+                            <label for="remember-me" class="ml-2 block text-sm text-gray-700">Remember me</label>
+                        </div>
+                        <a href="#" class="text-sm text-primary-500 hover:text-primary-600">Forgot password?</a>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                        Sign In
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <span class="text-gray-600">Don't have an account? </span>
+                    <button onclick="showRegister()" class="text-primary-500 hover:text-primary-600 font-medium">Create one</button>
+                </div>
+                
+                <button onclick="showWelcome()" class="mt-4 text-gray-500 hover:text-gray-700 text-sm flex items-center mx-auto">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+            </div>
+
+            <!-- Registration Form -->
+            <div id="register-form" class="hidden bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Create Account</h2>
+                    <p class="text-gray-600">Join our platform and start your financial journey</p>
+                </div>
+                
+                <form onsubmit="handleRegister(event)" class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="first-name" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                            <input type="text" id="first-name" name="firstName" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                   placeholder="John" data-mock="true">
+                        </div>
+                        <div>
+                            <label for="last-name" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                            <input type="text" id="last-name" name="lastName" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                   placeholder="Doe" data-mock="true">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email" id="register-email" name="email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="john.doe@example.com" data-mock="true">
+                    </div>
+                    
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="register-password" name="password" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="Create a secure password" data-mock="true">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-4">Account Type</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-primary-500 transition-colors">
+                                <input type="radio" name="role" value="merchant" class="sr-only" required>
+                                <div class="flex flex-col items-center text-center w-full">
+                                    <i class="fas fa-store text-2xl text-primary-500 mb-2"></i>
+                                    <span class="font-medium text-gray-900">Merchant</span>
+                                    <span class="text-xs text-gray-600 mt-1">Securitize receivables</span>
+                                </div>
+                                <div class="absolute top-2 right-2 w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                            </label>
+                            
+                            <label class="relative flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-primary-500 transition-colors">
+                                <input type="radio" name="role" value="investor" class="sr-only" required>
+                                <div class="flex flex-col items-center text-center w-full">
+                                    <i class="fas fa-chart-pie text-2xl text-success-500 mb-2"></i>
+                                    <span class="font-medium text-gray-900">Investor</span>
+                                    <span class="text-xs text-gray-600 mt-1">Explore opportunities</span>
+                                </div>
+                                <div class="absolute top-2 right-2 w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="terms" required class="h-4 w-4 text-primary-500 focus:ring-primary-500 border-gray-300 rounded">
+                        <label for="terms" class="ml-2 block text-sm text-gray-700">
+                            I agree to the <a href="#" class="text-primary-500 hover:text-primary-600">Terms of Service</a> and <a href="#" class="text-primary-500 hover:text-primary-600">Privacy Policy</a>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                        Create Account
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <span class="text-gray-600">Already have an account? </span>
+                    <button onclick="showLogin()" class="text-primary-500 hover:text-primary-600 font-medium">Sign in</button>
+                </div>
+                
+                <button onclick="showWelcome()" class="mt-4 text-gray-500 hover:text-gray-700 text-sm flex items-center mx-auto">
+                    <i class="fas fa-arrow-left mr-2"></i>Back
+                </button>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: AuthenticationSection -->
+
+        <!-- @COMPONENT: MerchantDashboard -->
+        <div id="merchant-dashboard" class="hidden">
+            <!-- Dashboard Header -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Merchant Dashboard</h1>
+                    <p class="text-gray-600 mt-1">Welcome back! Ready to securitize your receivables?</p>
+                </div>
+                <button onclick="logout()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Receivables</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="totalReceivables">$245,000</p>
+                        </div>
+                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-file-invoice-dollar text-primary-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-success-500 font-medium">+12%</span>
+                        <span class="text-gray-600 ml-1">from last month</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Securitized Amount</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="securitizedAmount">$150,000</p>
+                        </div>
+                        <div class="w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-shield-alt text-success-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-success-500 font-medium">+8%</span>
+                        <span class="text-gray-600 ml-1">from last month</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Active Pools</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="activePools">3</p>
+                        </div>
+                        <div class="w-10 h-10 bg-accent-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-layer-group text-accent-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-gray-600">2 pending approval</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Average Rating</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="averageRating">4.8</p>
+                        </div>
+                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-star text-yellow-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-gray-600">Based on 24 reviews</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Receivables</h3>
+                        <div class="space-y-4">
+                            <!-- @MAP: recentReceivables.map(receivable => ( -->
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg" data-mock="true">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center mr-3">
+                                        <i class="fas fa-receipt text-primary-500"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900" data-bind="receivable.client">TechCorp Inc.</p>
+                                        <p class="text-sm text-gray-600" data-bind="receivable.invoiceNumber">Invoice #12345</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-gray-900" data-bind="receivable.amount">$25,000</p>
+                                    <p class="text-sm text-gray-600" data-bind="receivable.dueDate">Due: Jan 15, 2024</p>
+                                </div>
+                            </div>
+                            <!-- @END_MAP )) -->
+                            
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg" data-mock="true">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center mr-3">
+                                        <i class="fas fa-receipt text-primary-500"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Global Solutions LLC</p>
+                                        <p class="text-sm text-gray-600">Invoice #12346</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-gray-900">$35,000</p>
+                                    <p class="text-sm text-gray-600">Due: Jan 20, 2024</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="mt-4 w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg transition-colors">
+                            Add New Receivable
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl p-6 text-white">
+                        <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+                        <div class="space-y-3">
+                            <button class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left flex items-center">
+                                <i class="fas fa-plus mr-3"></i>Create Pool
+                            </button>
+                            <button class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left flex items-center">
+                                <i class="fas fa-chart-bar mr-3"></i>View Analytics
+                            </button>
+                            <button class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left flex items-center">
+                                <i class="fas fa-cog mr-3"></i>Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: MerchantDashboard -->
+
+        <!-- @COMPONENT: InvestorDashboard -->
+        <div id="investor-dashboard" class="hidden">
+            <!-- Dashboard Header -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Investor Dashboard</h1>
+                    <p class="text-gray-600 mt-1">Welcome back! Explore new investment opportunities.</p>
+                </div>
+                <button onclick="logout()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+
+            <!-- Portfolio Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Portfolio Value</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="portfolioValue">$875,000</p>
+                        </div>
+                        <div class="w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-wallet text-success-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-success-500 font-medium">+15.2%</span>
+                        <span class="text-gray-600 ml-1">from last month</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Active Investments</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="activeInvestments">12</p>
+                        </div>
+                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-primary-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-gray-600">Across 8 pools</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Monthly Returns</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="monthlyReturns">$12,450</p>
+                        </div>
+                        <div class="w-10 h-10 bg-accent-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-coins text-accent-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-success-500 font-medium">+8.5%</span>
+                        <span class="text-gray-600 ml-1">from last month</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Risk Score</p>
+                            <p class="text-2xl font-bold text-gray-900" data-bind="riskScore">B+</p>
+                        </div>
+                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-shield-alt text-yellow-500"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-sm">
+                        <span class="text-gray-600">Moderate risk level</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investment Opportunities -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">New Investment Opportunities</h3>
+                        <div class="space-y-4">
+                            <!-- @MAP: investmentOpportunities.map(opportunity => ( -->
+                            <div class="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors cursor-pointer" data-mock="true">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900" data-bind="opportunity.title">Tech Receivables Pool #47</h4>
+                                        <p class="text-sm text-gray-600" data-bind="opportunity.merchant">By TechCorp Inc.</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
+                                            Grade A
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <p class="text-gray-600">Pool Size</p>
+                                        <p class="font-semibold" data-bind="opportunity.poolSize">$250,000</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Expected Return</p>
+                                        <p class="font-semibold text-success-600" data-bind="opportunity.expectedReturn">8.5%</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Duration</p>
+                                        <p class="font-semibold" data-bind="opportunity.duration">90 days</p>
+                                    </div>
+                                </div>
+                                <button class="mt-3 w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg transition-colors text-sm">
+                                    View Details
+                                </button>
+                            </div>
+                            <!-- @END_MAP )) -->
+                            
+                            <div class="border border-gray-200 rounded-lg p-4 hover:border-primary-500 transition-colors cursor-pointer" data-mock="true">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900">Manufacturing Receivables Pool #48</h4>
+                                        <p class="text-sm text-gray-600">By Industrial Solutions Ltd.</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                                            Grade B+
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <p class="text-gray-600">Pool Size</p>
+                                        <p class="font-semibold">$180,000</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Expected Return</p>
+                                        <p class="font-semibold text-success-600">7.2%</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-600">Duration</p>
+                                        <p class="font-semibold">120 days</p>
+                                    </div>
+                                </div>
+                                <button class="mt-3 w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg transition-colors text-sm">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-br from-success-500 to-success-600 rounded-xl p-6 text-white">
+                        <h3 class="text-lg font-semibold mb-4">Investment Tools</h3>
+                        <div class="space-y-3">
+                            <button class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left flex items-center">
+                                <i class="fas fa-search mr-3"></i>Browse Pools
+                            </button>
+                            <button class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left flex items-center">
+                                <i class="fas fa-calculator mr-3"></i>ROI Calculator
+                            </button>
+                            <button class="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white py-2 px-4 rounded-lg transition-colors text-left flex items-center">
+                                <i class="fas fa-download mr-3"></i>Export Portfolio
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Portfolio Allocation</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Technology</span>
+                                <span class="text-sm font-medium">45%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary-500 h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Manufacturing</span>
+                                <span class="text-sm font-medium">35%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-success-500 h-2 rounded-full" style="width: 35%"></div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Healthcare</span>
+                                <span class="text-sm font-medium">20%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-accent-500 h-2 rounded-full" style="width: 20%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: InvestorDashboard -->
+
+    </main>
+    <!-- @END_COMPONENT: MainContainer -->
+
+    <!-- JavaScript for Authentication Flow -->
+    <script>
+        (function() {
+            // TODO: Implement proper authentication with backend integration
+            // TODO: Add form validation and error handling
+            // TODO: Implement secure session management
+            
+            // Mock user data storage
+            let users = JSON.parse(localStorage.getItem('users') || '[]');
+            let currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+
+            // Initialize app state
+            function initializeApp() {
+                if (currentUser) {
+                    showDashboard(currentUser.role);
+                } else {
+                    showWelcome();
+                }
+            }
+
+            // Navigation functions
+            window.showWelcome = function() {
+                hideAllScreens();
+                document.getElementById('welcome-screen').classList.remove('hidden');
+            }
+
+            window.showLogin = function() {
+                hideAllScreens();
+                document.getElementById('login-form').classList.remove('hidden');
+            }
+
+            window.showRegister = function() {
+                hideAllScreens();
+                document.getElementById('register-form').classList.remove('hidden');
+                setupRoleSelection();
+            }
+
+            function hideAllScreens() {
+                document.getElementById('welcome-screen').classList.add('hidden');
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.add('hidden');
+                document.getElementById('merchant-dashboard').classList.add('hidden');
+                document.getElementById('investor-dashboard').classList.add('hidden');
+            }
+
+            function showDashboard(role) {
+                hideAllScreens();
+                if (role === 'merchant') {
+                    document.getElementById('merchant-dashboard').classList.remove('hidden');
+                } else if (role === 'investor') {
+                    document.getElementById('investor-dashboard').classList.remove('hidden');
+                }
+            }
+
+            // Role selection styling
+            function setupRoleSelection() {
+                const roleInputs = document.querySelectorAll('input[name="role"]');
+                roleInputs.forEach(input => {
+                    input.addEventListener('change', function() {
+                        // Remove selected styling from all options
+                        document.querySelectorAll('input[name="role"]').forEach(radio => {
+                            const label = radio.closest('label');
+                            label.classList.remove('border-primary-500', 'bg-primary-50');
+                            const dot = label.querySelector('.absolute div:last-child');
+                            if (dot) dot.classList.remove('bg-primary-500');
+                        });
+                        
+                        // Add selected styling to chosen option
+                        if (this.checked) {
+                            const label = this.closest('label');
+                            label.classList.add('border-primary-500', 'bg-primary-50');
+                            const dot = label.querySelector('.absolute div:last-child');
+                            if (dot) {
+                                dot.classList.remove('border-gray-300');
+                                dot.classList.add('bg-primary-500', 'border-primary-500');
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Login handler
+            window.handleLogin = function(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const email = formData.get('email');
+                const password = formData.get('password');
+
+                // Mock authentication - in real implementation, this would be an API call
+                const user = users.find(u => u.email === email && u.password === password);
+                
+                if (user) {
+                    currentUser = { email: user.email, role: user.role, name: user.firstName + ' ' + user.lastName };
+                    sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    showDashboard(user.role);
+                } else {
+                    alert('Invalid credentials. Please try again.');
+                }
+            }
+
+            // Registration handler
+            window.handleRegister = function(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                
+                const newUser = {
+                    firstName: formData.get('firstName'),
+                    lastName: formData.get('lastName'),
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    role: formData.get('role')
+                };
+
+                // Check if user already exists
+                if (users.find(u => u.email === newUser.email)) {
+                    alert('An account with this email already exists.');
+                    return;
+                }
+
+                // Add new user
+                users.push(newUser);
+                localStorage.setItem('users', JSON.stringify(users));
+
+                // Auto-login after registration
+                currentUser = { 
+                    email: newUser.email, 
+                    role: newUser.role, 
+                    name: newUser.firstName + ' ' + newUser.lastName 
+                };
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showDashboard(newUser.role);
+            }
+
+            // Logout handler
+            window.logout = function() {
+                currentUser = null;
+                sessionStorage.removeItem('currentUser');
+                showWelcome();
+            }
+
+            // Initialize the application
+            initializeApp();
+        })();
+    </script>
+</body>
+</html>

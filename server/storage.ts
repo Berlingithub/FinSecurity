@@ -4,6 +4,7 @@ import {
   securities,
   notifications,
   watchlist,
+  transactions,
   type User,
   type UpsertUser,
   type RegisterUser,
@@ -15,9 +16,11 @@ import {
   type InsertNotification,
   type WatchlistItem,
   type InsertWatchlistItem,
+  type Transaction,
+  type InsertTransaction,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, or, sql } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -53,6 +56,17 @@ export interface IStorage {
   clearUserWatchlist(userId: string): Promise<void>;
   purchaseWatchlistItems(userId: string): Promise<Security[]>;
   clearAllNotifications(userId: string): Promise<void>;
+  // Enhanced operations
+  updateUserProfile(userId: string, profileData: Partial<User>): Promise<User>;
+  updateUserWalletBalance(userId: string, amount: number): Promise<User>;
+  getPurchasedSecurities(userId: string): Promise<Security[]>;
+  purchaseSecurity(securityId: string, buyerId: string): Promise<Security>;
+  markSecurityAsPaid(securityId: string): Promise<Security>;
+  // Transaction operations
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransactionsByUser(userId: string): Promise<Transaction[]>;
+  getTransactionsBySecurity(securityId: string): Promise<Transaction[]>;
+  updateTransactionStatus(transactionId: string, status: "pending" | "processing" | "completed" | "failed" | "refunded"): Promise<Transaction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -194,32 +208,32 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(securities.listedAt));
   }
 
-  async getPurchasedSecurities(investorId: string): Promise<Security[]> {
-    return await db
-      .select()
-      .from(securities)
-      .where(eq(securities.purchasedBy, investorId))
-      .orderBy(desc(securities.purchasedAt));
-  }
+  // async getPurchasedSecurities(investorId: string): Promise<Security[]> {
+  //   return await db
+  //     .select()
+  //     .from(securities)
+  //     .where(eq(securities.purchasedBy, investorId))
+  //     .orderBy(desc(securities.purchasedAt));
+  // }
 
-  async purchaseSecurity(securityId: string, investorId: string): Promise<Security> {
-    const [security] = await db
-      .update(securities)
-      .set({
-        status: "purchased",
-        purchasedBy: investorId,
-        purchasedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(securities.id, securityId), eq(securities.status, "listed")))
-      .returning();
+  // async purchaseSecurity(securityId: string, investorId: string): Promise<Security> {
+  //   const [security] = await db
+  //     .update(securities)
+  //     .set({
+  //       status: "purchased",
+  //       purchasedBy: investorId,
+  //       purchasedAt: new Date(),
+  //       updatedAt: new Date(),
+  //     })
+  //     .where(and(eq(securities.id, securityId), eq(securities.status, "listed")))
+  //     .returning();
     
-    if (!security) {
-      throw new Error("Security not found or already purchased");
-    }
+  //   if (!security) {
+  //     throw new Error("Security not found or already purchased");
+  //   }
     
-    return security;
-  }
+  //   return security;
+  // }
 
   async getSecurity(id: string): Promise<any | undefined> {
     const [result] = await db
@@ -287,48 +301,48 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Security payment methods
-  async markSecurityAsPaid(securityId: string): Promise<Security> {
-    const [security] = await db
-      .update(securities)
-      .set({ 
-        status: "paid",
-        paidAt: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(securities.id, securityId))
-      .returning();
-    return security;
-  }
+  // async markSecurityAsPaid(securityId: string): Promise<Security> {
+  //   const [security] = await db
+  //     .update(securities)
+  //     .set({ 
+  //       status: "paid",
+  //       paidAt: new Date(),
+  //       updatedAt: new Date()
+  //     })
+  //     .where(eq(securities.id, securityId))
+  //     .returning();
+  //   return security;
+  // }
 
-  async updateUserWalletBalance(userId: string, amount: number): Promise<User> {
-    // Get current balance
-    const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
-    const currentBalance = parseFloat(currentUser.walletBalance || "0");
-    const newBalance = currentBalance + amount;
+  // async updateUserWalletBalance(userId: string, amount: number): Promise<User> {
+  //   // Get current balance
+  //   const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
+  //   const currentBalance = parseFloat(currentUser.walletBalance || "0");
+  //   const newBalance = currentBalance + amount;
 
-    const [user] = await db
-      .update(users)
-      .set({ 
-        walletBalance: newBalance.toString(),
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
-  }
+  //   const [user] = await db
+  //     .update(users)
+  //     .set({ 
+  //       walletBalance: newBalance.toString(),
+  //       updatedAt: new Date()
+  //     })
+  //     .where(eq(users.id, userId))
+  //     .returning();
+  //   return user;
+  // }
 
   // Profile management methods
-  async updateUserProfile(userId: string, profileData: Partial<UpsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        ...profileData,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
-  }
+  // async updateUserProfile(userId: string, profileData: Partial<UpsertUser>): Promise<User> {
+  //   const [user] = await db
+  //     .update(users)
+  //     .set({
+  //       ...profileData,
+  //       updatedAt: new Date(),
+  //     })
+  //     .where(eq(users.id, userId))
+  //     .returning();
+  //   return user;
+  // }
 
   // Notification methods
   async createNotification(notification: InsertNotification): Promise<Notification> {
@@ -446,6 +460,131 @@ export class DatabaseStorage implements IStorage {
     await this.clearUserWatchlist(userId);
 
     return purchasedSecurities;
+  }
+
+  // Enhanced operations
+  async updateUserProfile(userId: string, profileData: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...profileData,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUserWalletBalance(userId: string, amount: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        walletBalance: sql`${users.walletBalance} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getPurchasedSecurities(userId: string): Promise<Security[]> {
+    return await db
+      .select()
+      .from(securities)
+      .where(
+        and(
+          eq(securities.purchasedBy, userId),
+          eq(securities.status, "purchased")
+        )
+      )
+      .orderBy(desc(securities.purchasedAt));
+  }
+
+  async purchaseSecurity(securityId: string, buyerId: string): Promise<Security> {
+    const [security] = await db
+      .update(securities)
+      .set({
+        status: "purchased",
+        purchasedBy: buyerId,
+        purchasedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(securities.id, securityId),
+          eq(securities.status, "listed")
+        )
+      )
+      .returning();
+
+    if (!security) {
+      throw new Error("Security not found or already purchased");
+    }
+
+    return security;
+  }
+
+  async markSecurityAsPaid(securityId: string): Promise<Security> {
+    const [security] = await db
+      .update(securities)
+      .set({
+        status: "paid",
+        paidAt: new Date(),
+      })
+      .where(eq(securities.id, securityId))
+      .returning();
+
+    if (!security) {
+      throw new Error("Security not found");
+    }
+
+    return security;
+  }
+
+  // Transaction operations
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const [newTransaction] = await db
+      .insert(transactions)
+      .values(transaction)
+      .returning();
+    return newTransaction;
+  }
+
+  async getTransactionsByUser(userId: string): Promise<Transaction[]> {
+    return await db
+      .select()
+      .from(transactions)
+      .where(
+        or(
+          eq(transactions.buyerId, userId),
+          eq(transactions.sellerId, userId)
+        )
+      )
+      .orderBy(desc(transactions.createdAt));
+  }
+
+  async getTransactionsBySecurity(securityId: string): Promise<Transaction[]> {
+    return await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.securityId, securityId))
+      .orderBy(desc(transactions.createdAt));
+  }
+
+  async updateTransactionStatus(transactionId: string, status: "pending" | "processing" | "completed" | "failed" | "refunded"): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(eq(transactions.id, transactionId))
+      .returning();
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    return transaction;
   }
 }
 
